@@ -7,7 +7,7 @@ public sealed class PlayerDashState : PlayerStateBase
 
     public override void Enter(PlayerController p)
     {
-        timeRemaining = p.dashDuration;
+        timeRemaining = p.DashDuration;
 
         dashDir = p.GetCommittedDashDirection();
         if (dashDir.sqrMagnitude < 0.0001f)
@@ -19,7 +19,7 @@ public sealed class PlayerDashState : PlayerStateBase
         dashDir.Normalize();
 
         // Immediate burst
-        p.RB.linearVelocity = dashDir * p.dashSpeed;
+        p.RB.linearVelocity = dashDir * p.DashSpeed;
         p.CurrentVelocity = p.RB.linearVelocity;
 
         // Presentation layer hook
@@ -31,7 +31,7 @@ public sealed class PlayerDashState : PlayerStateBase
         timeRemaining -= Time.fixedDeltaTime;
 
         // Enforce commitment (no steering)
-        p.RB.linearVelocity = dashDir * p.dashSpeed;
+        p.RB.linearVelocity = dashDir * p.DashSpeed;
 
         if (timeRemaining <= 0f)
             p.ChangeState(p.MoveState);

@@ -3,10 +3,10 @@ using UnityEngine;
 public class EnemyVisibility : MonoBehaviour
 {
     public SpriteRenderer mainRenderer;         // Lit triangle
-    public Transform player;
     public float visibleRadius = 2.5f;          // match your light radius
     public float visibleRadiusHysteresis = 0.3f; // prevents flicker at edge
 
+    public Transform player { get; set; }
     bool currentlyVisible;
 
     void Reset()

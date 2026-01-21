@@ -10,14 +10,14 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private VirtualAimCursor aimCursor;
 
     [Header("Movement Tuning")]
-    public float moveSpeed = 6f;
+    [SerializeField] private float moveSpeed = 6f;
     public float acceleration = 30f;
     public float deceleration = 40f;
 
     [Header("Dash")]
-    public float dashSpeed = 16f;
-    public float dashDuration = 0.15f;
-    public float dashCooldown = 0.7f;
+    [SerializeField] private float dashSpeed = 16f;
+    [SerializeField] private float dashDuration = 0.15f;
+    [SerializeField] private float dashCooldown = 0.7f;
     public bool allowDashWithoutInput = true;
 
     [Header("Dash Feel (Optional)")]
@@ -51,6 +51,26 @@ public class PlayerController : MonoBehaviour
 
     // Tweens
     private Tween _dashFeelTween;
+
+    private UpgradeManager _upgradeManager;
+    private UpgradeManager UpgradeMgr
+    {
+        get
+        {
+            if (_upgradeManager == null)
+                _upgradeManager = UpgradeManager.Instance;
+            return _upgradeManager;
+        }
+    }
+
+    private float VelocityMultiplier => UpgradeMgr != null ? UpgradeMgr.VelocityMultiplier : 1f;
+    private float DashDistanceMultiplier => UpgradeMgr != null ? UpgradeMgr.DashDistanceMultiplier : 1f;
+    private float DashCooldownMultiplier => UpgradeMgr != null ? UpgradeMgr.DashCooldownMultiplier : 1f;
+
+    public float MovementSpeed => moveSpeed * VelocityMultiplier;
+    public float DashSpeed => dashSpeed * DashDistanceMultiplier;
+    public float DashDuration => dashDuration;
+    public float DashCooldown => dashCooldown * DashCooldownMultiplier;
 
     /// <summary>
     /// Single source of truth for aim direction. If no cursor, falls back to right.
@@ -131,7 +151,7 @@ public class PlayerController : MonoBehaviour
         if (IsDead || IsDashing) return;
         if (_dashCooldownRemaining > 0f) return;
 
-        _dashCooldownRemaining = dashCooldown;
+        _dashCooldownRemaining = DashCooldown;
         ChangeState(DashState);
     }
 
@@ -233,7 +253,8 @@ public class PlayerController : MonoBehaviour
     // UI helper
     public float DashCooldown01()
     {
-        if (dashCooldown <= 0f) return 0f;
-        return Mathf.Clamp01(_dashCooldownRemaining / dashCooldown);
+        float cooldown = DashCooldown;
+        if (cooldown <= 0f) return 0f;
+        return Mathf.Clamp01(_dashCooldownRemaining / cooldown);
     }
 }

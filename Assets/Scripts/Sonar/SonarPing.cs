@@ -74,13 +74,34 @@ public class SonarPing : MonoBehaviour
     Coroutine _flashlightRoutine;
     Coroutine _pulseRoutine;
 
+    UpgradeManager _upgradeManager;
+
     // Persistent visual instance (from pool)
     SonarConeVisual _flashlightVisual; // assume this is the type returned by conePool.Get()
 
+    private UpgradeManager UpgradeMgr
+    {
+        get
+        {
+            if (_upgradeManager == null)
+            {
+                _upgradeManager = UpgradeManager.Instance;
+                if (_upgradeManager != null)
+                    _upgradeManager.UpgradesChanged += HandleUpgradeChanged;
+            }
+
+            return _upgradeManager;
+        }
+    }
+
+    private float EffectiveFlashlightRange => range * (UpgradeMgr != null ? UpgradeMgr.FlashlightRangeMultiplier : 1f);
+    private float EffectiveFlashlightAngle => angleDeg * (UpgradeMgr != null ? UpgradeMgr.FlashlightAngleMultiplier : 1f);
+    private float EffectivePulseCooldown => pulseCooldown * (UpgradeMgr != null ? UpgradeMgr.ScanCooldownMultiplier : 1f);
+    private bool ShouldFlashlightBeActive => flashlightEnabled || (UpgradeMgr != null && UpgradeMgr.RadarAlwaysOn);
+
     void OnEnable()
     {
-        if (flashlightEnabled)
-            StartFlashlight();
+        EnsureFlashlightState();
     }
 
     void OnDisable()
@@ -88,6 +109,12 @@ public class SonarPing : MonoBehaviour
         StopFlashlight();
         StopPulse();
         HideFlashlightVisual();
+
+        if (_upgradeManager != null)
+        {
+            _upgradeManager.UpgradesChanged -= HandleUpgradeChanged;
+            _upgradeManager = null;
+        }
     }
 
     // ----------------------------------------------------
@@ -113,10 +140,15 @@ public class SonarPing : MonoBehaviour
     {
         if (!CanPulse()) return;
 
-        _nextPulseReadyTime = Time.time + pulseCooldown;
+        _nextPulseReadyTime = Time.time + EffectivePulseCooldown;
 
         if (_pulseRoutine != null) StopCoroutine(_pulseRoutine);
         _pulseRoutine = StartCoroutine(PulseRoutine());
+    }
+
+    void HandleUpgradeChanged(UpgradeSnapshot snapshot)
+    {
+        EnsureFlashlightState(forceRefresh: true);
     }
 
     // ----------------------------------------------------
@@ -125,6 +157,9 @@ public class SonarPing : MonoBehaviour
 
     void StartFlashlight()
     {
+        if (!ShouldFlashlightBeActive)
+            return;
+
         if (_flashlightRoutine != null) StopCoroutine(_flashlightRoutine);
         _flashlightRoutine = StartCoroutine(FlashlightRoutine());
     }
@@ -138,11 +173,28 @@ public class SonarPing : MonoBehaviour
         }
     }
 
+    void EnsureFlashlightState(bool forceRefresh = false)
+    {
+        bool shouldRun = ShouldFlashlightBeActive;
+        bool running = _flashlightRoutine != null;
+
+        if (shouldRun)
+        {
+            if (forceRefresh || !running)
+                StartFlashlight();
+        }
+        else if (running)
+        {
+            StopFlashlight();
+            HideFlashlightVisual();
+        }
+    }
+
     IEnumerator FlashlightRoutine()
     {
         EnsureFlashlightVisual();
 
-        while (flashlightEnabled)
+        while (ShouldFlashlightBeActive)
         {
             Vector2 origin = transform.position;
             Vector2 dir = GetAimDir();
@@ -153,10 +205,11 @@ public class SonarPing : MonoBehaviour
             UpdateFlashlightVisual(origin, dir);
 
             if (flashlightDrawWallOutlines)
-                SpawnWallOutlines(origin, dir, range);
+                SpawnWallOutlines(origin, dir, EffectiveFlashlightRange);
 
             yield return new WaitForSeconds(flashlightUpdateInterval);
         }
+        _flashlightRoutine = null;
     }
 
     void EnsureFlashlightVisual()
@@ -164,14 +217,10 @@ public class SonarPing : MonoBehaviour
         if (conePool == null) return;
 
         if (_flashlightVisual == null)
-        {
             _flashlightVisual = conePool.Get();
-            _flashlightVisual.BeginContinuous(transform, range, angleDeg, obstacleMask, piercingUpgrade, rayCount, colorOverride: flashlightColor);
-        }
-        else
-        {
-            _flashlightVisual.SetRestColor(flashlightColor);
-        }
+
+        _flashlightVisual.BeginContinuous(transform, EffectiveFlashlightRange, EffectiveFlashlightAngle, obstacleMask, piercingUpgrade, rayCount, colorOverride: flashlightColor);
+        _flashlightVisual.SetRestColor(flashlightColor);
     }
 
     void HideFlashlightVisual()
@@ -294,8 +343,8 @@ public class SonarPing : MonoBehaviour
 
     void RevealInCone(Vector2 origin, Vector2 forward, float durationOverride)
     {
-        Collider2D[] candidates = Physics2D.OverlapCircleAll(origin, range, revealableMask);
-        float half = angleDeg * 0.5f;
+        Collider2D[] candidates = Physics2D.OverlapCircleAll(origin, EffectiveFlashlightRange, revealableMask);
+        float half = EffectiveFlashlightAngle * 0.5f;
 
         for (int i = 0; i < candidates.Length; i++)
         {
@@ -330,9 +379,9 @@ public class SonarPing : MonoBehaviour
 
         _facesHitThisScan.Clear();
 
-        float half = angleDeg * 0.5f;
+        float half = EffectiveFlashlightAngle * 0.5f;
         float startAng = -half;
-        float step = angleDeg / Mathf.Max(1, (rayCount - 1));
+        float step = EffectiveFlashlightAngle / Mathf.Max(1, (rayCount - 1));
 
         for (int i = 0; i < rayCount; i += impactStride)
         {
