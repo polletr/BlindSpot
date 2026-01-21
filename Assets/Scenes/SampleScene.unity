@@ -4718,7 +4718,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1387439781}
   - component: {fileID: 1387439782}
-  m_Layer: 3
+  - component: {fileID: 1387439783}
+  m_Layer: 0
   m_Name: PlayerVision
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4733,7 +4734,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1387439780}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0.004443967, w: 0.99999017}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 20, y: 20, z: 1}
   m_ConstrainProportionsScale: 0
@@ -4780,8 +4781,8 @@ MonoBehaviour:
     m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
-  m_PointLightInnerRadius: 1.2
-  m_PointLightOuterRadius: 2
+  m_PointLightInnerRadius: 2
+  m_PointLightOuterRadius: 3
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -4792,6 +4793,22 @@ MonoBehaviour:
   - {x: 0.5, y: -0.5, z: 0}
   - {x: 0.5, y: 0.5, z: 0}
   - {x: -0.5, y: 0.5, z: 0}
+--- !u!114 &1387439783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1387439780}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2196d63fe5d34034697a864f360734d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerVisionField
+  visionLight: {fileID: 1387439782}
+  detectionMask:
+    serializedVersion: 2
+    m_Bits: 192
 --- !u!1001 &1412641976
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6601,18 +6618,8 @@ MonoBehaviour:
   flashlightUpdateInterval: 0.03
   flashlightDrawWallOutlines: 1
   flashlightColor: {r: 0.85, g: 0.92, b: 1, a: 1}
-  pulseColor: {r: 1, g: 0.58, b: 0.33, a: 1}
-  pulseColorBlendTime: 0.12
-  pulseColorFadeTime: 0.4
-  pulseColorEase: 4
-  pulseRetractTime: 0.5
-  pulseReturnTime: 0.35
-  pulseRetractEase: 8
-  pulseReturnEase: 9
-  pulseRevealDuration: 2
-  pulseRevealPerTick: 0.15
-  pulseScanInterval: 0.05
-  pulseCooldown: 3
+  flashlightReveals: 1
+  flashlightRevealDuration: 0.2
   range: 5
   angleDeg: 60
   obstacleMask:

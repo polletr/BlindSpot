@@ -1,31 +1,75 @@
+﻿using DG.Tweening;
 using UnityEngine;
 
 public class EnemyVisibility : MonoBehaviour
 {
-    public SpriteRenderer mainRenderer;         // Lit triangle
-    public float visibleRadius = 2.5f;          // match your light radius
-    public float visibleRadiusHysteresis = 0.3f; // prevents flicker at edge
+    [SerializeField] SpriteRenderer mainRenderer;         // Lit triangle
+    [SerializeField] float fadeDuration = 0.25f;
 
     public Transform player { get; set; }
     bool currentlyVisible;
+    Tween fadeTween;
+    float visibleAlpha = 1f;
 
-    void Reset()
+    void Awake()
     {
-        mainRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (!mainRenderer)
+        {
+            mainRenderer = GetComponentInChildren<SpriteRenderer>();
+        }
     }
 
-    void Update()
+    void OnEnable()
     {
-        if (!player || !mainRenderer) return;
+        if (!mainRenderer) return;
 
-        float d = Vector2.Distance(player.position, transform.position);
+        visibleAlpha = Mathf.Clamp01(mainRenderer.color.a <= 0f ? 1f : mainRenderer.color.a);
+        mainRenderer.enabled = true;
+        currentlyVisible = false;
+        fadeTween?.Kill();
+        SetRendererAlpha(0f);
+    }
 
-        float on = visibleRadius;
-        float off = visibleRadius + visibleRadiusHysteresis;
+    void OnDisable()
+    {
+        fadeTween?.Kill();
+        if (PlayerVisionField.Instance != null)
+            PlayerVisionField.Instance.ForceExit(this);
+    }
 
-        if (!currentlyVisible && d <= on) currentlyVisible = true;
-        else if (currentlyVisible && d >= off) currentlyVisible = false;
 
-        mainRenderer.enabled = currentlyVisible;
+    public void SetVisionContact(bool inside, bool instant = false)
+    {
+        if (!mainRenderer) return;
+
+        if (currentlyVisible == inside && !instant) return;
+
+        currentlyVisible = inside;
+        UpdateRendererVisibility(instant);
+    }
+
+    void UpdateRendererVisibility(bool instant = false)
+    {
+        if (!mainRenderer) return;
+
+        fadeTween?.Kill();
+
+        float targetAlpha = currentlyVisible ? visibleAlpha : 0f;
+
+        if (instant || fadeDuration <= 0f)
+        {
+            SetRendererAlpha(targetAlpha);
+            return;
+        }
+
+        fadeTween = mainRenderer.DOFade(targetAlpha, fadeDuration)
+            .SetEase(Ease.Linear);
+    }
+
+    void SetRendererAlpha(float alpha)
+    {
+        Color current = mainRenderer.color;
+        current.a = alpha;
+        mainRenderer.color = current;
     }
 }

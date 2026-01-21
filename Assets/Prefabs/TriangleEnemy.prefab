@@ -242,8 +242,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   mainRenderer: {fileID: 4291068463849789129}
-  visibleRadius: 1.5
-  visibleRadiusHysteresis: 0.3
+  fadeDuration: 0.25
 --- !u!114 &2336322293522959534
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -257,20 +256,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TriangleEnemy
   player: {fileID: 0}
-  moveSpeed: 4
+  moveSpeed: 2
   acceleration: 25
-  chaseSpeedMultiplier: 1.35
+  chaseSpeedMultiplier: 1.2
   alertTime: 0.15
   chaseCommitTime: 0.55
   repositionTime: 0.35
-  stopDistance: 0.65
+  stopDistance: 1
   tips: []
   tipSwitchCooldown: 0.25
   tipSwitchBetterBy: 0.25
   rotateSpeed: 720
-  detectRadius: 6
+  detectRadius: 4
   loseRadius: 9
   drawGizmos: 1
+  chargeDistance: 1
+  chargeDuration: 3
+  dashDuration: 0.5
+  dashSpeedMultiplier: 4
+  chargeVfx: {fileID: 6792385287786586221, guid: 855dfa34b9c69204bab761cce2e3e144, type: 3}
 --- !u!212 &4291068463849789129
 SpriteRenderer:
   serializedVersion: 2

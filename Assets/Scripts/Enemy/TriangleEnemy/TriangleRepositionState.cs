@@ -13,7 +13,7 @@ public sealed class TriangleRepositionState : EnemyStateBase
     {
         var t = (TriangleEnemy)e;
 
-        if (t.PlayerBeyondLoseRadius())
+        if (t.PlayerBeyondLoseRadius() || t.IsPlayerDead)
         {
             t.ChangeState(t.IdleState);
             return;
@@ -21,12 +21,12 @@ public sealed class TriangleRepositionState : EnemyStateBase
 
         _time += Time.deltaTime;
         if (_time >= t.repositionTime)
-            t.ChangeState(t.AlertState);
+            t.ChangeState(t.ChaseState);
     }
 
     public override void FixedTick(EnemyBase e)
     {
-        var t = (TriangleEnemy)e;
-        t.MoveForward(0.9f);
+        e.StopMove(80f);
     }
 }
+

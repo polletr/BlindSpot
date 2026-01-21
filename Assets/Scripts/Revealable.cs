@@ -10,6 +10,9 @@ public class Revealable : MonoBehaviour
 
     float visibleUntil;
     float currentAlpha;
+    bool insidePlayerVision;
+
+    public bool CanBeRevealed => !insidePlayerVision;
 
     void Awake()
     {
@@ -22,13 +25,14 @@ public class Revealable : MonoBehaviour
 
     public void Reveal(float duration)
     {
-        Debug.Log("Revealing");
+        if (insidePlayerVision) return;
         visibleUntil = Mathf.Max(visibleUntil, Time.time + duration);
         SetAlpha(1f);
     }
 
     void Update()
     {
+        if (insidePlayerVision) return;
         if (Time.time <= visibleUntil) return;
 
         currentAlpha = Mathf.MoveTowards(currentAlpha, 0f, Time.deltaTime / Mathf.Max(0.01f, fadeOutTime));
@@ -48,4 +52,23 @@ public class Revealable : MonoBehaviour
             renderers[i].color = c;
         }
     }
+    void OnDisable()
+    {
+        if (PlayerVisionField.Instance != null)
+            PlayerVisionField.Instance.ForceExit(this);
+    }
+
+    public void SetVisionContact(bool inside)
+    {
+        if (insidePlayerVision == inside) return;
+
+        insidePlayerVision = inside;
+
+        if (insidePlayerVision)
+        {
+            visibleUntil = 0f;
+            SetAlpha(0f);
+        }
+    }
+
 }

@@ -157,15 +157,7 @@ public class PlayerController : MonoBehaviour
 
     public void OnPing(InputAction.CallbackContext ctx)
     {
-        if (!ctx.performed) return;
-        if (sonar == null) return;
-
-        // Rule: cannot START ping while dashing
-        if (IsDashing) return;
-
-
-        // Ping should follow player movement; aim is sampled live each scan tick inside SonarPing.
-        sonar.DoPulse();
+        // Manual sonar pulses have been retired; handler kept to consume the input action.
     }
 
     // ------------------------

@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
-using DG.Tweening;
 
 public class SonarPing : MonoBehaviour
 {
@@ -22,22 +21,12 @@ public class SonarPing : MonoBehaviour
 
     [Header("Flashlight Colors")]
     public Color flashlightColor = new Color(0.85f, 0.92f, 1f, 1f);
-    public Color pulseColor = new Color(1f, 0.58f, 0.33f, 1f);
-    public float pulseColorBlendTime = 0.12f;
-    public float pulseColorFadeTime = 0.4f;
-    public Ease pulseColorEase = Ease.InOutSine;
 
-    [Header("Pulse (On Click)")]
-    [Tooltip("How long the flashlight takes to shrink before the scan burst.")]
-    public float pulseRetractTime = 0.5f;
-    [Tooltip("How long the flashlight takes to expand back out after shrinking.")]
-    public float pulseReturnTime = 0.35f;
-    public Ease pulseRetractEase = Ease.InCubic;
-    public Ease pulseReturnEase = Ease.OutCubic;
-    public float pulseRevealDuration = 0.6f;       // revealables stay visible during this pulse window
-    public float pulseRevealPerTick = 0.15f;       // how long each tick reveal call lasts
-    public float pulseScanInterval = 0.05f;        // how often we refresh reveal during the pulse
-    public float pulseCooldown = 1.0f;
+    [Header("Reveal")]
+    [Tooltip("If true the flashlight continuously reveals targets in its cone.")]
+    public bool flashlightReveals = true;
+    [Tooltip("How long each reveal tick keeps objects visible.")]
+    public float flashlightRevealDuration = 0.2f;
 
     [Header("Tuning")]
     public float range = 7f;
@@ -70,9 +59,7 @@ public class SonarPing : MonoBehaviour
     Vector2 _cachedAimDir = Vector2.right;
 
     // Runtime
-    float _nextPulseReadyTime;
     Coroutine _flashlightRoutine;
-    Coroutine _pulseRoutine;
 
     UpgradeManager _upgradeManager;
 
@@ -96,8 +83,8 @@ public class SonarPing : MonoBehaviour
 
     private float EffectiveFlashlightRange => range * (UpgradeMgr != null ? UpgradeMgr.FlashlightRangeMultiplier : 1f);
     private float EffectiveFlashlightAngle => angleDeg * (UpgradeMgr != null ? UpgradeMgr.FlashlightAngleMultiplier : 1f);
-    private float EffectivePulseCooldown => pulseCooldown * (UpgradeMgr != null ? UpgradeMgr.ScanCooldownMultiplier : 1f);
     private bool ShouldFlashlightBeActive => flashlightEnabled || (UpgradeMgr != null && UpgradeMgr.RadarAlwaysOn);
+    PlayerVisionField VisionField => PlayerVisionField.Instance;
 
     void OnEnable()
     {
@@ -107,7 +94,6 @@ public class SonarPing : MonoBehaviour
     void OnDisable()
     {
         StopFlashlight();
-        StopPulse();
         HideFlashlightVisual();
 
         if (_upgradeManager != null)
@@ -126,25 +112,6 @@ public class SonarPing : MonoBehaviour
         _aimProvider = aimProvider;
     }
 
-    public bool CanPulse()
-    {
-        if (Time.time < _nextPulseReadyTime) return false;
-        if (_pulseRoutine != null) return false; // prevent stacking pulses
-        return true;
-    }
-
-    /// <summary>
-    /// Click action: retract flashlight briefly, then run a short reveal pulse.
-    /// </summary>
-    public void DoPulse()
-    {
-        if (!CanPulse()) return;
-
-        _nextPulseReadyTime = Time.time + EffectivePulseCooldown;
-
-        if (_pulseRoutine != null) StopCoroutine(_pulseRoutine);
-        _pulseRoutine = StartCoroutine(PulseRoutine());
-    }
 
     void HandleUpgradeChanged(UpgradeSnapshot snapshot)
     {
@@ -200,12 +167,13 @@ public class SonarPing : MonoBehaviour
             Vector2 dir = GetAimDir();
 
             // Keep the visual cone on and aligned.
-            // This assumes your visual has some way to be "updated".
-            // If your current visual only supports Play(), add an Update/Set method (see note below).
             UpdateFlashlightVisual(origin, dir);
 
             if (flashlightDrawWallOutlines)
                 SpawnWallOutlines(origin, dir, EffectiveFlashlightRange);
+
+            if (flashlightReveals)
+                RevealInCone(origin, dir, flashlightRevealDuration);
 
             yield return new WaitForSeconds(flashlightUpdateInterval);
         }
@@ -242,78 +210,6 @@ public class SonarPing : MonoBehaviour
     }
 
     // ----------------------------------------------------
-    // Pulse (reveal burst)
-    // ----------------------------------------------------
-
-    void StopPulse()
-    {
-        if (_pulseRoutine != null)
-        {
-            StopCoroutine(_pulseRoutine);
-            _pulseRoutine = null;
-        }
-
-        if (_flashlightVisual != null)
-        {
-            StartFlashlightColorTween(flashlightColor, pulseColorFadeTime, pulseColorEase);
-
-            if (flashlightEnabled && gameObject.activeInHierarchy)
-                _flashlightVisual.AnimateFlashlightOn(0.1f, pulseReturnEase);
-        }
-    }
-
-    IEnumerator PulseRoutine()
-    {
-        StartFlashlightColorTween(pulseColor, pulseColorBlendTime, pulseColorEase);
-
-        yield return AnimateFlashlightTween(false, pulseRetractTime, pulseRetractEase);
-        yield return AnimateFlashlightTween(true, pulseReturnTime, pulseReturnEase);
-
-        // Reveal burst window
-        float end = Time.time + pulseRevealDuration;
-
-        while (Time.time < end)
-        {
-            Vector2 origin = transform.position;
-            Vector2 dir = GetAimDir();
-
-            RevealInCone(origin, dir, pulseRevealPerTick);
-
-            // Optional: do wall outlines only during pulse (if you want "scan" feel)
-            // SpawnWallOutlines(origin, dir, range);
-
-            yield return new WaitForSeconds(pulseScanInterval);
-        }
-
-        StartFlashlightColorTween(flashlightColor, pulseColorFadeTime, pulseColorEase);
-
-        _pulseRoutine = null;
-    }
-
-    IEnumerator AnimateFlashlightTween(bool turnOn, float duration, Ease ease)
-    {
-        if (_flashlightVisual == null)
-        {
-            yield return new WaitForSeconds(duration);
-            yield break;
-        }
-
-        Tween tween = turnOn
-            ? _flashlightVisual.AnimateFlashlightOn(duration, ease)
-            : _flashlightVisual.AnimateFlashlightOff(duration, ease);
-
-        if (tween != null)
-            yield return tween.WaitForCompletion();
-        else
-            yield return new WaitForSeconds(duration);
-    }
-
-    Tween StartFlashlightColorTween(Color targetColor, float duration, Ease ease)
-    {
-        if (_flashlightVisual == null) return null;
-        return _flashlightVisual.AnimateColor(targetColor, duration, ease);
-    }
-
     // ----------------------------------------------------
     // Aim
     // ----------------------------------------------------
@@ -344,6 +240,7 @@ public class SonarPing : MonoBehaviour
     void RevealInCone(Vector2 origin, Vector2 forward, float durationOverride)
     {
         Collider2D[] candidates = Physics2D.OverlapCircleAll(origin, EffectiveFlashlightRange, revealableMask);
+        PlayerVisionField vision = VisionField;
         float half = EffectiveFlashlightAngle * 0.5f;
 
         for (int i = 0; i < candidates.Length; i++)
@@ -361,6 +258,9 @@ public class SonarPing : MonoBehaviour
             float ang = Vector2.Angle(forward, dir);
             if (ang > half) continue;
 
+            if (vision != null && vision.ContainsPoint(closest))
+                continue;
+
             if (!piercingUpgrade)
             {
                 RaycastHit2D block = Physics2D.Raycast(origin, dir, dist, obstacleMask);
@@ -368,7 +268,7 @@ public class SonarPing : MonoBehaviour
             }
 
             var reveal = col.GetComponentInParent<Revealable>();
-            if (reveal != null)
+            if (reveal != null && reveal.CanBeRevealed)
                 reveal.Reveal(durationOverride);
         }
     }

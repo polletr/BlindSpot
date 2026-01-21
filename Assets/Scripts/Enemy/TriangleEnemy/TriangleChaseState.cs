@@ -1,38 +1,35 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public sealed class TriangleChaseState : EnemyStateBase
 {
-    float _time;
+    float _chaseTimer;
 
     public override void Enter(EnemyBase e)
     {
-        _time = 0f;
-        var t = (TriangleEnemy)e;
-
-        // Lock tip for entire chase burst
-        t.PickActiveTip(force: true);
-        t.FreezeTipSelection(t.chaseCommitTime);
+        _chaseTimer = 0f;
     }
 
     public override void Tick(EnemyBase e)
     {
         var t = (TriangleEnemy)e;
 
-        if (t.PlayerBeyondLoseRadius())
+        if (t.PlayerBeyondLoseRadius() || t.IsPlayerDead)
         {
             t.ChangeState(t.IdleState);
             return;
         }
 
-        _time += Time.deltaTime;
-        if (_time >= t.chaseCommitTime)
-            t.ChangeState(t.RepositionState);
+        _chaseTimer += Time.deltaTime;
+        if (t.ShouldStartCharge(_chaseTimer))
+        {
+            t.ChangeState(t.AlertState);
+        }
     }
 
     public override void FixedTick(EnemyBase e)
     {
         var t = (TriangleEnemy)e;
-        t.MoveForward(t.chaseSpeedMultiplier);
+        t.MoveInDirection(t.DirToPlayer, t.chaseSpeedMultiplier);
     }
 }
 
