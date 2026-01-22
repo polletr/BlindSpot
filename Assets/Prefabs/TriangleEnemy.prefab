@@ -256,7 +256,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TriangleEnemy
   player: {fileID: 0}
-  moveSpeed: 2
+  moveSpeed: 3
   acceleration: 25
   chaseSpeedMultiplier: 1.2
   alertTime: 0.15
@@ -270,11 +270,22 @@ MonoBehaviour:
   detectRadius: 4
   loseRadius: 9
   drawGizmos: 1
-  chargeDistance: 1
+  chargeDistance: 2
+  minChaseTimeBeforeDash: 5
+  dashCooldown: 10
   chargeDuration: 3
   dashDuration: 0.5
   dashSpeedMultiplier: 4
+  directionCommitLeadTime: 0.08
   chargeVfx: {fileID: 6792385287786586221, guid: 855dfa34b9c69204bab761cce2e3e144, type: 3}
+  shakeTarget: {fileID: 0}
+  shakeStrength: 0.2
+  shakeVibrato: 25
+  dashStretchAmount: 2
+  dashSquashAmount: 1
+  dashStretchTime: 0.08
+  dashSettleTime: 0.15
+  dashVisualRoot: {fileID: 0}
 --- !u!212 &4291068463849789129
 SpriteRenderer:
   serializedVersion: 2

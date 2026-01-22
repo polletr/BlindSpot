@@ -81,9 +81,13 @@ public abstract class EnemyBase : MonoBehaviour
         if (!HasPlayer) return;
 
         PickActiveTip(force: false);
-        RotateSoActiveTipFacesPlayer();
+
+        if (ShouldRotateTowardPlayer)
+            RotateSoActiveTipFacesPlayer();
 
     }
+
+    protected virtual bool ShouldRotateTowardPlayer => true;
 
     protected virtual void FixedUpdate()
     {

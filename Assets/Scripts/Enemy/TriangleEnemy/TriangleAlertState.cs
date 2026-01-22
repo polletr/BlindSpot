@@ -23,6 +23,7 @@ public sealed class TriangleAlertState : EnemyStateBase
         }
 
         _timer += Time.deltaTime;
+        t.UpdateChargeWindup(_timer);
         if (_timer >= t.chargeDuration)
         {
             t.ChangeState(t.DashState);
