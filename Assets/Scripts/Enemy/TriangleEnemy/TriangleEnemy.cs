@@ -29,19 +29,17 @@ public class TriangleEnemy : EnemyBase
     Tween dashStretchTween;
     Vector3 shakeTargetRestLocalPos;
     Vector3 dashVisualRestScale = Vector3.one;
-    PlayerController playerController;
     // States
     public TriangleIdleState IdleState { get; private set; }
     public TriangleAlertState AlertState { get; private set; }
     public TriangleChaseState ChaseState { get; private set; }
     public TriangleDashState DashState { get; private set; }
     public TriangleRepositionState RepositionState { get; private set; }
-    public bool IsPlayerDead => playerController != null && playerController.IsDead;
+    public bool IsPlayerDead => IsTargetPlayerDead;
     protected override bool ShouldRotateTowardPlayer => !rotationLocked;
     protected override void Awake()
     {
         base.Awake();
-        playerController = player ? player.GetComponent<PlayerController>() : null;
         if (shakeTarget == null)
             shakeTarget = transform;
         shakeTargetRestLocalPos = shakeTarget.localPosition;

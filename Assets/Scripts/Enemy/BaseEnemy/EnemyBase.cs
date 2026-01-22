@@ -8,6 +8,7 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Refs")]
     [SerializeField] protected Transform player; // assign or auto-find
     public Rigidbody2D RB { get; private set; }
+    protected PlayerController TargetPlayerController { get; private set; }
 
     [Header("Movement")]
     public float moveSpeed = 4f;
@@ -44,6 +45,7 @@ public abstract class EnemyBase : MonoBehaviour
     public bool drawGizmos = true;
 
     protected IEnemyState currentState;
+    protected bool IsTargetPlayerDead => TargetPlayerController != null && TargetPlayerController.IsDead;
 
     protected virtual void Awake()
     {
@@ -56,6 +58,7 @@ public abstract class EnemyBase : MonoBehaviour
             var pc = FindFirstObjectByType<PlayerController>();
             if (pc != null) player = pc.transform;
         }
+        CachePlayerControllerReference();
         if (TryGetComponent(out EnemyVisibility enemyVis))
         {
             enemyVis.player = player;
@@ -91,6 +94,12 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void FixedUpdate()
     {
+        if (IsTargetPlayerDead)
+        {
+            StopMove();
+            return;
+        }
+
         currentState?.FixedTick(this);
     }
 
@@ -197,6 +206,14 @@ public abstract class EnemyBase : MonoBehaviour
             ActiveTip = best;
             _nextTipSwitchTime = Time.time + tipSwitchCooldown;
         }
+    }
+
+    void CachePlayerControllerReference()
+    {
+        if (player != null)
+            TargetPlayerController = player.GetComponent<PlayerController>();
+        else
+            TargetPlayerController = null;
     }
 
     public void FreezeTipSelection(float duration)

@@ -8,6 +8,6 @@ public class EnemyTipKill : MonoBehaviour
         if (player == null) return;
 
         if (!player.IsDead)
-            player.KillPlayer();
+            player.KillPlayer(transform.position, transform); ;
     }
 }

@@ -107,12 +107,17 @@ public class SonarPing : MonoBehaviour
     // Public API
     // ----------------------------------------------------
 
-    public void SetAimProvider(Func<Vector2> aimProvider)
-    {
-        _aimProvider = aimProvider;
-    }
-
-
+    public void SetAimProvider(Func<Vector2> aimProvider)
+    {
+        _aimProvider = aimProvider;
+    }
+
+    public void ForceFlashlightState(bool enabled)
+    {
+        flashlightEnabled = enabled;
+        EnsureFlashlightState(forceRefresh: true);
+    }
+
     void HandleUpgradeChanged(UpgradeSnapshot snapshot)
     {
         EnsureFlashlightState(forceRefresh: true);

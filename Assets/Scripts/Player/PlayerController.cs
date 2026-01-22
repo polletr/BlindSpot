@@ -51,6 +51,8 @@ public class PlayerController : MonoBehaviour
 
     // Tweens
     private Tween _dashFeelTween;
+    private bool _movementInputLocked;
+    private bool _flashlightEnabledBeforeKill = true;
 
     private UpgradeManager _upgradeManager;
     private UpgradeManager UpgradeMgr
@@ -106,7 +108,11 @@ public class PlayerController : MonoBehaviour
             aimCursor.SetAimOrigin(transform);
 
         if (sonar == null) sonar = GetComponent<SonarPing>();
-        if (sonar != null) sonar.SetAimProvider(() => AimDir); // AimDir from your cursor/provider
+        if (sonar != null)
+        {
+            sonar.SetAimProvider(() => AimDir); // AimDir from your cursor/provider
+            _flashlightEnabledBeforeKill = sonar.flashlightEnabled;
+        }
 
         MoveState = new PlayerMoveState();
         DashState = new PlayerDashState();
@@ -137,6 +143,12 @@ public class PlayerController : MonoBehaviour
         Vector2 v = ctx.ReadValue<Vector2>();
         if (v.sqrMagnitude > 1f) v.Normalize();
 
+        if (_movementInputLocked)
+        {
+            MoveInput = Vector2.zero;
+            return;
+        }
+
         MoveInput = v;
 
         if (v.sqrMagnitude > 0.001f)
@@ -144,6 +156,15 @@ public class PlayerController : MonoBehaviour
     }
 
     public void SetMoveInput(Vector2 v) => MoveInput = v;
+
+    void SetMovementInputLocked(bool locked)
+    {
+        if (_movementInputLocked == locked) return;
+
+        _movementInputLocked = locked;
+        if (locked)
+            SetMoveInput(Vector2.zero);
+    }
 
     public void OnDash(InputAction.CallbackContext ctx)
     {
@@ -174,15 +195,42 @@ public class PlayerController : MonoBehaviour
     }
 
     // External hook for lethal contact
-    public void KillPlayer()
+    public void KillPlayer(Vector3 hitPointWorld, Transform attackerTip)
     {
         if (IsDead) return;
+
+        SetMovementInputLocked(true);
+
+        if (sonar != null)
+        {
+            _flashlightEnabledBeforeKill = sonar.flashlightEnabled;
+            sonar.ForceFlashlightState(false);
+        }
         ChangeState(DeadState);
+
+        Vector3 playerPos = visualRoot.transform.position;
+
+        // Align the slice along the incoming attack: plane passes through the tip direction.
+        Vector3 tipToPlayer = (playerPos - attackerTip.position).normalized;
+        Vector3 cutNormal = Vector3.Cross(tipToPlayer, Vector3.forward).normalized;
+        if (cutNormal.sqrMagnitude < 0.0001f)
+        {
+            cutNormal = Vector3.right;
+        }
+        var ctx = new DeathHitContext(playerPos, hitPointWorld, cutNormal, attackerTip);
+        DeathDirector.Instance.PlayDeath(ctx, visualRoot.GetComponent<SpriteRenderer>());
+
+        Debug.Log("[Player] Kill triggered. TODO: fade to black and open shop UI.");
     }
 
     public void Respawn(Vector2 position)
     {
         transform.position = position;
+        SetMovementInputLocked(false);
+
+        if (sonar != null)
+            sonar.ForceFlashlightState(_flashlightEnabledBeforeKill);
+
         ChangeState(MoveState);
     }
 
