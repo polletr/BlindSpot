@@ -180,7 +180,7 @@ public class TriangleEnemy : EnemyBase
     {
         Vector2 dir = dashDirectionLocked ? dashDirection : ForwardDir;
         if (dir.sqrMagnitude < 0.0001f) dir = ForwardDir;
-        RB.linearVelocity = dir.normalized * (moveSpeed * dashSpeedMultiplier);
+        RB.linearVelocity = dir.normalized * (CurrentMoveSpeed * dashSpeedMultiplier);
     }
     public void FinishDash()
     {

@@ -36,7 +36,18 @@ public class UpgradeManager : Singleton<UpgradeManager>
     public float CurrencyCollectorMultiplier => _snapshot.currencyCollectorMultiplier;
     public float ScanCooldownMultiplier => _snapshot.scanCooldownMultiplier;
     public float DashCooldownMultiplier => _snapshot.dashCooldownMultiplier;
+    public float EnemySpeedMultiplier => _snapshot.enemySpeedMultiplier;
+    public float EnemyDetectionRadiusMultiplier => _snapshot.enemyDetectionRadiusMultiplier;
+    public float EnemyLoseSightRadiusMultiplier => _snapshot.enemyLoseSightRadiusMultiplier;
+    public float EnemyAmountMultiplier => _snapshot.enemyAmountMultiplier;
+    public float BlopsAmountMultiplier => _snapshot.blopsAmountMultiplier;
     public bool RadarAlwaysOn => _snapshot.radarAlwaysOn;
+
+
+
+
+
+
 
     protected override void Awake()
     {
@@ -140,7 +151,13 @@ public struct UpgradeSnapshot
     public float scanCooldownMultiplier;
     public float roundLightIntensityMultiplier;
     public float dashCooldownMultiplier;
+    public float enemySpeedMultiplier;
+    public float enemyDetectionRadiusMultiplier;
+    public float enemyLoseSightRadiusMultiplier;
+    public float enemyAmountMultiplier;
+    public float blopsAmountMultiplier;
     public bool radarAlwaysOn;
+
 
     public static UpgradeSnapshot Identity => new UpgradeSnapshot()
     {
@@ -153,7 +170,13 @@ public struct UpgradeSnapshot
         scanCooldownMultiplier = 1f,
         roundLightIntensityMultiplier = 1f,
         dashCooldownMultiplier = 1f,
-        radarAlwaysOn = false
+        enemySpeedMultiplier = 1f,
+        enemyDetectionRadiusMultiplier = 1f,
+        enemyLoseSightRadiusMultiplier = 1f,
+        enemyAmountMultiplier = 1f,
+        blopsAmountMultiplier = 1f,
+        radarAlwaysOn = false,
+
     };
 
     public void Merge(RunUpgrade upgrade)
@@ -170,7 +193,14 @@ public struct UpgradeSnapshot
         scanCooldownMultiplier *= upgrade.scanCooldownTempMultiplier;
         roundLightIntensityMultiplier *= upgrade.roundLightIntensityTempMultiplier;
         dashCooldownMultiplier *= upgrade.dashCooldownTempMultiplier;
-        radarAlwaysOn |= upgrade.radarAlwaysOn;
+        enemySpeedMultiplier *= upgrade.enemySpeedTempMultiplier;
+        enemyDetectionRadiusMultiplier *= upgrade.enemyDetectionRadiusTempMultiplier;
+        enemyLoseSightRadiusMultiplier *= upgrade.enemyLoseSightRadiusTempMultiplier;
+        enemyAmountMultiplier *= upgrade.enemyAmountTempMultiplier;
+        blopsAmountMultiplier *= upgrade.blopsAmountTempMultiplier;
+        radarAlwaysOn |= upgrade.radarAlwaysOnTemp;
+
+
     }
 
     public void Merge(PermaUpgrade upgrade)
@@ -187,7 +217,8 @@ public struct UpgradeSnapshot
         scanCooldownMultiplier *= upgrade.scanCooldownPermMultiplier;
         roundLightIntensityMultiplier *= upgrade.roundLightIntensityPermMultiplier;
         dashCooldownMultiplier *= upgrade.dashCooldownPermMultiplier;
-        radarAlwaysOn |= upgrade.radarAlwaysOnPerm;
+        if (upgrade.radarAlwaysOnPerm)
+            radarAlwaysOn = true;
     }
 }
 

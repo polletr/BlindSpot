@@ -19,6 +19,9 @@ public class PlayerVisionField : MonoBehaviour
 
     PlayerController ownerController;
     float cachedOuterRadius;
+    float baseOuterRadius;
+    float baseLightIntensity = 1f;
+    UpgradeManager upgradeManager;
 
     public float CurrentOuterRadius => cachedOuterRadius;
 
@@ -34,6 +37,9 @@ public class PlayerVisionField : MonoBehaviour
             Debug.LogWarning("Multiple PlayerVisionField instances detected; keeping the latest.");
 
         Instance = this;
+        CacheBaseLightProperties();
+        TryHookUpgradeManager();
+        ApplyRoundLightSnapshot(upgradeManager != null ? upgradeManager.Snapshot : UpgradeSnapshot.Identity);
         SyncLightRadius(true);
     }
 
@@ -41,6 +47,8 @@ public class PlayerVisionField : MonoBehaviour
     {
         if (Instance != this)
             Instance = this;
+        TryHookUpgradeManager();
+        ApplyRoundLightSnapshot(upgradeManager != null ? upgradeManager.Snapshot : UpgradeSnapshot.Identity);
         SyncLightRadius(true);
     }
 
@@ -49,7 +57,74 @@ public class PlayerVisionField : MonoBehaviour
         if (Instance == this)
             Instance = null;
 
+        if (upgradeManager != null)
+        {
+            upgradeManager.UpgradesChanged -= HandleUpgradeChanged;
+            upgradeManager = null;
+        }
+
         ClearAllContacts();
+    }
+
+    void TryHookUpgradeManager()
+    {
+        if (upgradeManager != null)
+            return;
+
+        upgradeManager = UpgradeManager.Instance;
+        if (upgradeManager != null)
+            upgradeManager.UpgradesChanged += HandleUpgradeChanged;
+    }
+
+    void HandleUpgradeChanged(UpgradeSnapshot snapshot)
+    {
+        ApplyRoundLightSnapshot(snapshot);
+    }
+
+    void CacheBaseLightProperties()
+    {
+        if (visionLight == null)
+            visionLight = GetComponent<Light2D>();
+        if (visionLight == null)
+            return;
+
+        baseOuterRadius = GetLightOuterRadius();
+        baseLightIntensity = visionLight.intensity;
+    }
+
+    void ApplyRoundLightSnapshot(UpgradeSnapshot snapshot)
+    {
+        if (visionLight == null)
+            return;
+
+        float radius = Mathf.Max(0f, baseOuterRadius * Mathf.Max(0f, snapshot.roundLightMultiplier));
+        SetLightOuterRadius(radius);
+
+        float intensity = Mathf.Max(0f, baseLightIntensity * Mathf.Max(0f, snapshot.roundLightIntensityMultiplier));
+        visionLight.intensity = intensity;
+
+        SyncLightRadius(true);
+    }
+
+    void SetLightOuterRadius(float radius)
+    {
+        if (visionLight == null)
+            return;
+
+        switch (visionLight.lightType)
+        {
+            case Light2D.LightType.Point:
+                visionLight.pointLightOuterRadius = radius;
+                break;
+            case Light2D.LightType.Freeform:
+            case Light2D.LightType.Parametric:
+            case Light2D.LightType.Sprite:
+                visionLight.shapeLightFalloffSize = radius;
+                break;
+            default:
+                visionLight.pointLightOuterRadius = radius;
+                break;
+        }
     }
 
     void Update()

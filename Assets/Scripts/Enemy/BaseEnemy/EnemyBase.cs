@@ -10,6 +10,24 @@ public abstract class EnemyBase : MonoBehaviour
     public Rigidbody2D RB { get; private set; }
     protected PlayerController TargetPlayerController { get; private set; }
 
+    UpgradeManager upgradeManager;
+    protected UpgradeManager UpgradeMgr
+    {
+        get
+        {
+            if (upgradeManager == null)
+                upgradeManager = UpgradeManager.Instance;
+            return upgradeManager;
+        }
+    }
+
+    protected float EnemySpeedMultiplier => UpgradeMgr != null ? UpgradeMgr.EnemySpeedMultiplier : 1f;
+    protected float EnemyDetectionRadiusMultiplier => UpgradeMgr != null ? UpgradeMgr.EnemyDetectionRadiusMultiplier : 1f;
+    protected float EnemyLoseSightRadiusMultiplier => UpgradeMgr != null ? UpgradeMgr.EnemyLoseSightRadiusMultiplier : 1f;
+    protected float CurrentMoveSpeed => moveSpeed * EnemySpeedMultiplier;
+    protected float CurrentDetectRadius => detectRadius * EnemyDetectionRadiusMultiplier;
+    protected float CurrentLoseRadius => loseRadius * EnemyLoseSightRadiusMultiplier;
+
     [Header("Movement")]
     public float moveSpeed = 4f;
     public float acceleration = 25f;
@@ -133,15 +151,15 @@ public abstract class EnemyBase : MonoBehaviour
         }
     }
 
-    public bool PlayerInDetectRadius() => HasPlayer && DistToPlayer <= detectRadius;
-    public bool PlayerBeyondLoseRadius() => !HasPlayer || DistToPlayer >= loseRadius;
+    public bool PlayerInDetectRadius() => HasPlayer && DistToPlayer <= CurrentDetectRadius;
+    public bool PlayerBeyondLoseRadius() => !HasPlayer || DistToPlayer >= CurrentLoseRadius;
 
     // Basic “accelerated velocity” steering (feels consistent with your player)
     public void MoveInDirection(Vector2 dir, float speedMultiplier = 1f)
     {
         if (dir.sqrMagnitude < 0.0001f) return;
 
-        Vector2 targetVel = dir.normalized * (moveSpeed * speedMultiplier);
+        Vector2 targetVel = dir.normalized * (CurrentMoveSpeed * speedMultiplier);
         Vector2 newVel = Vector2.MoveTowards(RB.linearVelocity, targetVel, acceleration * Time.fixedDeltaTime);
         RB.linearVelocity = newVel;
     }
@@ -154,10 +172,12 @@ public abstract class EnemyBase : MonoBehaviour
     protected virtual void OnDrawGizmosSelected()
     {
         if (!drawGizmos) return;
+        float detect = Application.isPlaying ? CurrentDetectRadius : detectRadius;
+        float lose = Application.isPlaying ? CurrentLoseRadius : loseRadius;
         Gizmos.color = new Color(1f, 1f, 0f, 0.25f);
-        Gizmos.DrawWireSphere(transform.position, detectRadius);
+        Gizmos.DrawWireSphere(transform.position, detect);
         Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.25f);
-        Gizmos.DrawWireSphere(transform.position, loseRadius);
+        Gizmos.DrawWireSphere(transform.position, lose);
     }
 
     // -----------------------------

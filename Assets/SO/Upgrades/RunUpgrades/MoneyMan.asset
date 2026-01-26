@@ -13,14 +13,19 @@ MonoBehaviour:
   m_Name: MoneyMan
   m_EditorClassIdentifier: Assembly-CSharp::RunUpgrade
   upgradeName: Speedy
-  description: 'You gain 2x more blops, but the flashlight range is reduced by 20% '
-  velocityTempMultiplier: 1
+  description: You go faster but also make more noise, enemies can detect you sooner.
+  velocityTempMultiplier: 1.2
   dashDistanceTempMultiplier: 1
   flashlightAngleTempMultiplier: 1
-  flashlightRangeTempMultiplier: 0.8
+  flashlightRangeTempMultiplier: 1
   roundLightTempMultiplier: 1
   currencyCollectorTempMultiplier: 2
   scanCooldownTempMultiplier: 1
   roundLightIntensityTempMultiplier: 1
   dashCooldownTempMultiplier: 1
-  radarAlwaysOn: 0
+  enemySpeedTempMultiplier: 1
+  enemyDetectionRadiusTempMultiplier: 1
+  enemyLoseSightRadiusTempMultiplier: 1
+  enemyAmountTempMultiplier: 1
+  blopsAmountTempMultiplier: 1
+  radarAlwaysOnTemp: 0
