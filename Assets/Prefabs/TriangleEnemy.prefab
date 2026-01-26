@@ -26,8 +26,8 @@ Transform:
   m_GameObject: {fileID: 386071830537963444}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: -0.89, z: 0}
+  m_LocalScale: {x: 8, y: 8, z: 8}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 8615073484518424037}
@@ -118,7 +118,7 @@ Transform:
   m_GameObject: {fileID: 2256556674276892264}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.496, y: -0.342, z: 0}
+  m_LocalPosition: {x: -4.433, y: -3.838, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -158,8 +158,8 @@ CircleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.05522637}
-  m_Radius: 0.044773623
+  m_Offset: {x: 0, y: 0}
+  m_Radius: 0.2
 --- !u!114 &1882259545392442307
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204,8 +204,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -4.65, y: 3.48, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.06, y: 0.06, z: 0.12}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 394606152687336703}
   - {fileID: 5865617732651256408}
@@ -267,8 +267,8 @@ MonoBehaviour:
   tipSwitchCooldown: 0.25
   tipSwitchBetterBy: 0.25
   rotateSpeed: 720
-  detectRadius: 4
-  loseRadius: 9
+  detectRadius: 2.5
+  loseRadius: 6
   drawGizmos: 1
   chargeDistance: 2
   minChaseTimeBeforeDash: 5
@@ -281,8 +281,8 @@ MonoBehaviour:
   shakeTarget: {fileID: 0}
   shakeStrength: 0.2
   shakeVibrato: 25
-  dashStretchAmount: 2
-  dashSquashAmount: 1
+  dashStretchAmount: 0.5
+  dashSquashAmount: 0.2
   dashStretchTime: 0.08
   dashSettleTime: 0.15
   dashVisualRoot: {fileID: 0}
@@ -335,8 +335,8 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 75f5f34dc1b5347e0b8351032682f224, type: 3}
-  m_Color: {r: 1, g: 0.23137255, b: 0.41568628, a: 1}
+  m_Sprite: {fileID: -3795437932344149621, guid: 3039bd739a1c174489baf1f367db4794, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -382,8 +382,8 @@ PolygonCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.28866667}
-    oldSize: {x: 1, y: 1}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 8.87, y: 7.68}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -391,9 +391,9 @@ PolygonCollider2D:
   m_AutoTiling: 0
   m_Points:
     m_Paths:
-    - - {x: 0, y: 0.5773587}
-      - {x: -0.5, y: -0.28866667}
-      - {x: 0.5, y: -0.28866667}
+    - - {x: 0, y: 3.85}
+      - {x: -4.443366, y: -3.8395422}
+      - {x: 4.44336, y: -3.8430526}
   m_UseDelaunayMesh: 0
 --- !u!50 &4754565833241027563
 Rigidbody2D:
@@ -449,7 +449,7 @@ Transform:
   m_GameObject: {fileID: 6221263698232579546}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.519, z: 0}
+  m_LocalPosition: {x: 0, y: 3.8, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -489,8 +489,8 @@ CircleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.05522637}
-  m_Radius: 0.044773623
+  m_Offset: {x: 0, y: 0}
+  m_Radius: 0.2
 --- !u!114 &3353788517638187527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -530,7 +530,7 @@ Transform:
   m_GameObject: {fileID: 7977909760148626583}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.493, y: -0.339, z: 0}
+  m_LocalPosition: {x: 4.428, y: -3.838, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -570,8 +570,8 @@ CircleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.05522637}
-  m_Radius: 0.044773623
+  m_Offset: {x: 0, y: 0}
+  m_Radius: 0.2
 --- !u!114 &3779552640124699762
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -14,6 +14,6 @@ public class ExitFlowController : Singleton<ExitFlowController>
         Time.timeScale = 1f;
 
         UpgradeManager.Instance.ApplyUpgrade(upgrade);
-        ;// MapFlowController.Instance.LoadNextMap();
+        // MapFlowController.Instance.LoadNextMap();
     }
 }
