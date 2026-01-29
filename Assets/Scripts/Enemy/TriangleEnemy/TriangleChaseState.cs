@@ -7,6 +7,8 @@ public sealed class TriangleChaseState : EnemyStateBase
     public override void Enter(EnemyBase e)
     {
         _chaseTimer = 0f;
+        var t = (TriangleEnemy)e;
+        t.ResetChaseSteering();
     }
 
     public override void Tick(EnemyBase e)
@@ -29,7 +31,10 @@ public sealed class TriangleChaseState : EnemyStateBase
     public override void FixedTick(EnemyBase e)
     {
         var t = (TriangleEnemy)e;
-        t.MoveInDirection(t.DirToPlayer, t.chaseSpeedMultiplier);
+
+        float speedFraction = t.EvaluateChaseSpeedFraction();
+        Vector2 moveDir = t.GetSmoothedChaseDirection();
+        t.ApplyChaseMove(moveDir, speedFraction);
     }
 }
 

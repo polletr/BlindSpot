@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4369940675688376539}
   - component: {fileID: 349120264708788807}
   - component: {fileID: 7224903677850404542}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: CollectTrigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -94,7 +94,7 @@ GameObject:
   - component: {fileID: 1934366075450468733}
   - component: {fileID: 1753398069351074707}
   - component: {fileID: 5366113443491650253}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: MagnetTrigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -178,7 +178,7 @@ GameObject:
   - component: {fileID: 7672736699873156918}
   - component: {fileID: 6105099101142339924}
   - component: {fileID: 4985793951640094792}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Drops
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -204,6 +204,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &7672736699873156918
 SpriteRenderer:
+  serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -249,6 +250,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4fdd17bd72016e144acee5a62e606a6b, type: 3}
   m_Color: {r: 0.5722235, g: 1, b: 0.5330188, a: 1}
   m_FlipX: 0
@@ -258,7 +260,6 @@ SpriteRenderer:
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
-  m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!114 &6105099101142339924
 MonoBehaviour:
@@ -279,7 +280,7 @@ MonoBehaviour:
   magnetDelay: 0.1
   magnetDelayRandom: 0.1
   smoothTime: 0.08
-  maxSpeed: 35
+  maxSpeed: 45
   arriveDistance: 0.08
   rampUpTime: 0.1
   magnetTriggerCollider: {fileID: 1753398069351074707}

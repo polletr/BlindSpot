@@ -12,13 +12,13 @@ TagManager:
   - Player
   - Water
   - UI
-  - Obstacles
+  - Enemies
+  - Blops
+  - 
   - Revealables
+  - Obstacles
+  - Walls
   - FX
-  - 
-  - 
-  - 
-  - 
   - 
   - 
   - 

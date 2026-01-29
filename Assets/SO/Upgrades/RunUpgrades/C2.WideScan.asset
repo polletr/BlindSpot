@@ -10,17 +10,22 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e345bd1563b910945b83793119084c4d, type: 3}
-  m_Name: Speedy
+  m_Name: C2.WideScan
   m_EditorClassIdentifier: Assembly-CSharp::RunUpgrade
-  upgradeName: Speedy
-  description: You are 20% faster, but your dash has 20% distance
-  velocityTempMultiplier: 1.2
-  dashDistanceTempMultiplier: 0.8
-  flashlightAngleTempMultiplier: 1
+  upgradeName: Wide Scan
+  description: More sight angle, but your dash is weakened.
+  velocityTempMultiplier: 1
+  dashDistanceTempMultiplier: 0.85
+  flashlightAngleTempMultiplier: 1.25
   flashlightRangeTempMultiplier: 1
   roundLightTempMultiplier: 1
   currencyCollectorTempMultiplier: 1
   scanCooldownTempMultiplier: 1
   roundLightIntensityTempMultiplier: 1
   dashCooldownTempMultiplier: 1
-  radarAlwaysOn: 0
+  enemySpeedTempMultiplier: 1
+  enemyDetectionRadiusTempMultiplier: 1
+  enemyLoseSightRadiusTempMultiplier: 1
+  enemyAmountTempMultiplier: 1
+  blopsAmountTempMultiplier: 1
+  radarAlwaysOnTemp: 0

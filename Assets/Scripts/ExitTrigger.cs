@@ -5,7 +5,7 @@ public class ExitTrigger : MonoBehaviour
     [SerializeField] private LayerMask playerLayer;
     private bool _used;
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter2D(Collider2D other)
     {
         Debug.Log(other.gameObject.name);
 
@@ -16,4 +16,5 @@ public class ExitTrigger : MonoBehaviour
 
         ExitFlowController.Instance.OnExitReached();
     }
+
 }

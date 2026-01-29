@@ -29,6 +29,14 @@ public class TriangleEnemy : EnemyBase
     Tween dashStretchTween;
     Vector3 shakeTargetRestLocalPos;
     Vector3 dashVisualRestScale = Vector3.one;
+    [Header("Chase Behavior")]
+    [SerializeField, Range(0f, 0.5f)] float chaseDirectionSmoothTime = 0.12f;
+    [SerializeField, Range(1f, 4f)] float chaseSlowDistanceMultiplier = 1.75f;
+    [SerializeField, Range(0f, 1f)] float minChaseSpeedFraction = 0.25f;
+    [SerializeField, Range(0f, 0.3f)] float chaseVelocitySmoothTime = 0.06f;
+    Vector2 smoothedChaseDir = Vector2.up;
+    Vector2 chaseDirVelocity;
+    Vector2 chaseVelocityRef;
     // States
     public TriangleIdleState IdleState { get; private set; }
     public TriangleAlertState AlertState { get; private set; }
@@ -53,6 +61,7 @@ public class TriangleEnemy : EnemyBase
         ChaseState = new TriangleChaseState();
         DashState = new TriangleDashState();
         RepositionState = new TriangleRepositionState();
+        smoothedChaseDir = ForwardDir;
         ChangeState(IdleState);
     }
     public bool ReadyToCharge()
@@ -190,6 +199,89 @@ public class TriangleEnemy : EnemyBase
         StopChargeVfx();
         nextDashAllowedTime = Time.time + dashCooldown;
     }
+
+    public void ResetChaseSteering()
+    {
+        smoothedChaseDir = ForwardDir;
+        chaseDirVelocity = Vector2.zero;
+        chaseVelocityRef = Vector2.zero;
+    }
+
+    public Vector2 GetSmoothedChaseDirection()
+    {
+        Vector2 desired = DirToPlayer;
+        if (desired.sqrMagnitude < 0.0001f)
+        {
+            if (smoothedChaseDir.sqrMagnitude < 0.0001f)
+                smoothedChaseDir = transform.up;
+            return smoothedChaseDir.normalized;
+        }
+
+        if (chaseDirectionSmoothTime <= 0f)
+        {
+            smoothedChaseDir = desired.normalized;
+        }
+        else
+        {
+            smoothedChaseDir = Vector2.SmoothDamp(
+                smoothedChaseDir,
+                desired,
+                ref chaseDirVelocity,
+                chaseDirectionSmoothTime,
+                Mathf.Infinity,
+                Time.fixedDeltaTime);
+            if (smoothedChaseDir.sqrMagnitude < 0.0001f)
+                smoothedChaseDir = desired;
+        }
+        return smoothedChaseDir.normalized;
+    }
+
+    public float EvaluateChaseSpeedFraction()
+    {
+        if (!HasPlayer) return 0f;
+
+        float stop = Mathf.Max(0.01f, stopDistance);
+        float dist = DistToPlayer;
+        if (dist <= stop * 0.95f)
+            return 0f;
+
+        float slowRadius = Mathf.Max(stop + 0.05f, stop * Mathf.Max(1f, chaseSlowDistanceMultiplier));
+        if (dist >= slowRadius)
+            return 1f;
+
+        float t = Mathf.InverseLerp(stop, slowRadius, dist);
+        return Mathf.Lerp(minChaseSpeedFraction, 1f, t);
+    }
+
+    public void ApplyChaseMove(Vector2 dir, float speedFraction)
+    {
+        float clampedFraction = Mathf.Clamp01(speedFraction);
+        Vector2 desiredVelocity = Vector2.zero;
+        if (dir.sqrMagnitude >= 0.0001f && clampedFraction > 0f)
+        {
+            desiredVelocity = dir.normalized * (CurrentMoveSpeed * chaseSpeedMultiplier * clampedFraction);
+        }
+        SmoothChaseVelocity(desiredVelocity);
+    }
+
+    void SmoothChaseVelocity(Vector2 desiredVelocity)
+    {
+        if (chaseVelocitySmoothTime <= 0f)
+        {
+            RB.linearVelocity = desiredVelocity;
+            chaseVelocityRef = Vector2.zero;
+            return;
+        }
+
+        RB.linearVelocity = Vector2.SmoothDamp(
+            RB.linearVelocity,
+            desiredVelocity,
+            ref chaseVelocityRef,
+            chaseVelocitySmoothTime,
+            Mathf.Infinity,
+            Time.fixedDeltaTime);
+    }
+
     void OnDisable()
     {
         ResetDashStretchTween(true);

@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 394606152687336703}
   - component: {fileID: 6687000807255866948}
-  m_Layer: 7
+  m_Layer: 9
   m_Name: EnemySonarOverlay
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -102,7 +102,7 @@ GameObject:
   - component: {fileID: 4487427015563091525}
   - component: {fileID: 8852711280133463020}
   - component: {fileID: 1882259545392442307}
-  m_Layer: 7
+  m_Layer: 9
   m_Name: Tip (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -187,7 +187,7 @@ GameObject:
   - component: {fileID: 4291068463849789129}
   - component: {fileID: 1903434276918738385}
   - component: {fileID: 4754565833241027563}
-  m_Layer: 7
+  m_Layer: 9
   m_Name: TriangleEnemy
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -258,22 +258,22 @@ MonoBehaviour:
   player: {fileID: 0}
   moveSpeed: 3
   acceleration: 25
-  chaseSpeedMultiplier: 1.2
+  chaseSpeedMultiplier: 1.3
   alertTime: 0.15
   chaseCommitTime: 0.55
   repositionTime: 0.35
-  stopDistance: 1
+  stopDistance: 0.2
   tips: []
   tipSwitchCooldown: 0.25
   tipSwitchBetterBy: 0.25
   rotateSpeed: 720
   detectRadius: 2.5
-  loseRadius: 6
+  loseRadius: 5
   drawGizmos: 1
   chargeDistance: 2
   minChaseTimeBeforeDash: 5
   dashCooldown: 10
-  chargeDuration: 3
+  chargeDuration: 1.5
   dashDuration: 0.5
   dashSpeedMultiplier: 4
   directionCommitLeadTime: 0.08
@@ -281,11 +281,15 @@ MonoBehaviour:
   shakeTarget: {fileID: 0}
   shakeStrength: 0.2
   shakeVibrato: 25
-  dashStretchAmount: 0.5
-  dashSquashAmount: 0.2
+  dashStretchAmount: 0.2
+  dashSquashAmount: 0.1
   dashStretchTime: 0.08
   dashSettleTime: 0.15
   dashVisualRoot: {fileID: 0}
+  chaseDirectionSmoothTime: 0.1
+  chaseSlowDistanceMultiplier: 1.2
+  minChaseSpeedFraction: 0.1
+  chaseVelocitySmoothTime: 0.06
 --- !u!212 &4291068463849789129
 SpriteRenderer:
   serializedVersion: 2
@@ -433,7 +437,7 @@ GameObject:
   - component: {fileID: 5865617732651256408}
   - component: {fileID: 6312961895793746483}
   - component: {fileID: 3353788517638187527}
-  m_Layer: 7
+  m_Layer: 9
   m_Name: Tip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -514,7 +518,7 @@ GameObject:
   - component: {fileID: 2622657355086082428}
   - component: {fileID: 5101922525829919915}
   - component: {fileID: 3779552640124699762}
-  m_Layer: 7
+  m_Layer: 9
   m_Name: Tip (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}

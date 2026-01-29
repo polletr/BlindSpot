@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e345bd1563b910945b83793119084c4d, type: 3}
-  m_Name: MoneyMan
+  m_Name: A5.BlindMomentum
   m_EditorClassIdentifier: Assembly-CSharp::RunUpgrade
-  upgradeName: Speedy
-  description: You go faster but also make more noise, enemies can detect you sooner.
-  velocityTempMultiplier: 1.2
+  upgradeName: Blind Momentum
+  description: You move faster, but your sight angle decreases.
+  velocityTempMultiplier: 1.25
   dashDistanceTempMultiplier: 1
-  flashlightAngleTempMultiplier: 1
+  flashlightAngleTempMultiplier: 0.8
   flashlightRangeTempMultiplier: 1
   roundLightTempMultiplier: 1
-  currencyCollectorTempMultiplier: 2
+  currencyCollectorTempMultiplier: 1
   scanCooldownTempMultiplier: 1
   roundLightIntensityTempMultiplier: 1
   dashCooldownTempMultiplier: 1

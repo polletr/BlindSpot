@@ -45,7 +45,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeManager
   <IsPersistent>k__BackingField: 1
-  runUpgradePool: []
+  runUpgradePool:
+  - {fileID: 11400000, guid: 2e920d7d0c8d4ec4191dfbedd4de691c, type: 2}
+  - {fileID: 11400000, guid: 27de493a8b939914e8160a0a31bfafb4, type: 2}
+  - {fileID: 11400000, guid: 182bdeb99ea00dd4395777571a826606, type: 2}
+  - {fileID: 11400000, guid: 946b799edf6e4f74a97126602d1a46e3, type: 2}
+  - {fileID: 11400000, guid: 241d648f0067d8e4bbf78693e8c52091, type: 2}
+  - {fileID: 11400000, guid: 6cecc8da62973e6478857fe9b4f09f95, type: 2}
+  - {fileID: 11400000, guid: ca872acb406d9d347a5a1359b1a33c2c, type: 2}
+  - {fileID: 11400000, guid: ff5b6cbfa5121d14885dff02506b6bd2, type: 2}
+  - {fileID: 11400000, guid: 4df8da53673ef9d46bef0757350b0946, type: 2}
+  - {fileID: 11400000, guid: c62e7a4751a6221458a3e9871879f3ed, type: 2}
+  - {fileID: 11400000, guid: ca0f6ccf80aeea64e88b32da651baf12, type: 2}
+  - {fileID: 11400000, guid: 13c4aea11743377479fa80843d80c3a2, type: 2}
+  - {fileID: 11400000, guid: 495edb7bcecb5c74db96febfd949c0d9, type: 2}
+  - {fileID: 11400000, guid: bad6ca2b6ce26a34798af362c27c1a2c, type: 2}
+  - {fileID: 11400000, guid: 43a11eac37c704a4ba36cb40043527ef, type: 2}
+  - {fileID: 11400000, guid: dbc66bee41c2d44408533514c11fcc0d, type: 2}
   permaUpgradePool: []
   startingRunUpgrades: []
   startingPermaUpgrades: []
