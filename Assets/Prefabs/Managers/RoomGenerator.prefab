@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6048215618625128779
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7716634053193702248}
+  - component: {fileID: 6749689412402571437}
+  m_Layer: 0
+  m_Name: RoomGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7716634053193702248
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6048215618625128779}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6749689412402571437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6048215618625128779}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6ca714f48a2e174982df5446dc6e82e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoomGenerator
+  <IsPersistent>k__BackingField: 0
+  minWidth: 8
+  maxWidth: 16
+  minHeight: 8
+  maxHeight: 16
+  minArea: 150
+  maxArea: 650
+  cellSize: 1
+  wallPrefab: {fileID: 6396508144029174501, guid: 1cf6cccea1ea3984691a53e2de15453c, type: 3}
+  wallSegmentLength: 4.5
+  wallThickness: 1
+  autoDeriveWallMetrics: 1
+  constrainRoomToWallSegments: 1
+  minWallSegmentsX: 8
+  maxWallSegmentsX: 12
+  minWallSegmentsY: 8
+  maxWallSegmentsY: 12
+  exitPrefab: {fileID: 1902731795787987662, guid: 9047936d4a4331b47bfe1be77a237de8, type: 3}
+  playerSpawnMarkerPrefab: {fileID: 0}
+  difficultyConfig: {fileID: 11400000, guid: 8b0060debd69e56478feffc8769c8b47, type: 2}
+  squareEnemyPrefab: {fileID: 0}
+  triangleEnemyPrefab: {fileID: 5261239210734939324, guid: 0d9a4a29b1261654b823e45e6c86b575, type: 3}
+  starEnemyPrefab: {fileID: 0}
+  blopPrefab: {fileID: 8377181638012513058, guid: 99bcf473a66c6644e9af52a8e57db1dd, type: 3}
+  blockedMask:
+    serializedVersion: 2
+    m_Bits: 0
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  wallMask:
+    serializedVersion: 2
+    m_Bits: 2048
+  spawnInteriorObstacles: 1
+  obstaclePrefabs:
+  - {fileID: 6396508144029174501, guid: 893bb1c1020417346a43dd4d5f666638, type: 3}
+  obstacleMin: 15
+  obstacleMax: 26
+  obstaclePlacementTries: 40
+  wallInset: 0.6
+  spawnSafeRadius: 3
+  exitSafeRadius: 2
+  enemySpawnRadius: 0.45
+  blopSpawnRadius: 0.2
+  avoidEnemyOverlap: 1
+  enemyMask:
+    serializedVersion: 2
+    m_Bits: 0
+  generatedRoot: {fileID: 0}
