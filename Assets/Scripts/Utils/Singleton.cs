@@ -5,6 +5,7 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
     #region Properties
 
     private static T _instance; //all private fields for properties are denoted with an underscore in front of the name
+    public static bool HasInstance => _instance != null;
     public static T Instance
     {
         get

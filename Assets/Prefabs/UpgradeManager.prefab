@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b9fdc0f050f9ad4eb61e84dbb5b8cd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeManager
-  <IsPersistent>k__BackingField: 1
+  <IsPersistent>k__BackingField: 0
   runUpgradePool:
   - {fileID: 11400000, guid: 2e920d7d0c8d4ec4191dfbedd4de691c, type: 2}
   - {fileID: 11400000, guid: 27de493a8b939914e8160a0a31bfafb4, type: 2}

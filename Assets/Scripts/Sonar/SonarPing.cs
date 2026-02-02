@@ -43,12 +43,24 @@ public class SonarPing : MonoBehaviour
     [Header("Visual")]
     public SonarConeVisualPool conePool;
 
+    [Header("Pool Resolution")]
+    [Tooltip("Automatically subscribe to pool hub events so runtime-spawned players get valid pools.")]
+    public bool autoResolvePoolsFromHub = true;
+
     [Header("Wall Impact Streaks")]
     public SonarImpactPool impactPool;
     public Color impactColor = new Color(0.62f, 0.92f, 1f, 0.8f);
     public float impactLifetime = 0.35f;
     [Range(1, 10)] public int impactStride = 4;
     [FormerlySerializedAs("impactCooldownPerBin")] public float impactCooldownPerCollider = 0.08f;
+
+    [Header("Exit Distance Tint")]
+    public bool tintImpactsByExitDistance = true;
+    public Color exitNearColor = new Color(0.3f, 1f, 0.4f, 0.8f);
+    public Color exitMidColor = new Color(1f, 0.92f, 0.3f, 0.8f);
+    public Color exitFarColor = new Color(1f, 0.35f, 0.3f, 0.8f);
+    public float exitNearDistance = 2f;
+    public float exitFarDistance = 12f;
 
     [Header("Outline sizing")]
     public float outlineThickness = 0.06f;
@@ -88,11 +100,20 @@ public class SonarPing : MonoBehaviour
 
     void OnEnable()
     {
+        if (autoResolvePoolsFromHub)
+        {
+            SonarPoolHub.PoolsChanged += HandlePoolsChanged;
+            TryResolvePoolsFromHub();
+        }
+
         EnsureFlashlightState();
     }
 
     void OnDisable()
     {
+        if (autoResolvePoolsFromHub)
+            SonarPoolHub.PoolsChanged -= HandlePoolsChanged;
+
         StopFlashlight();
         HideFlashlightVisual();
 
@@ -104,20 +125,57 @@ public class SonarPing : MonoBehaviour
     }
 
     // ----------------------------------------------------
+    void TryResolvePoolsFromHub()
+    {
+        if (!autoResolvePoolsFromHub)
+            return;
+
+        if (conePool != null && impactPool != null)
+            return;
+
+        if (SonarPoolHub.TryGet(out var cone, out var impact))
+        {
+            if (conePool == null)
+                conePool = cone;
+            if (impactPool == null)
+                impactPool = impact;
+        }
+    }
+
+    void HandlePoolsChanged(SonarConeVisualPool cone, SonarImpactPool impact)
+    {
+        if (!autoResolvePoolsFromHub)
+            return;
+
+        conePool = cone;
+        impactPool = impact;
+    }
+
     // Public API
     // ----------------------------------------------------
 
-    public void SetAimProvider(Func<Vector2> aimProvider)
-    {
-        _aimProvider = aimProvider;
-    }
-
-    public void ForceFlashlightState(bool enabled)
-    {
-        flashlightEnabled = enabled;
-        EnsureFlashlightState(forceRefresh: true);
-    }
-
+    public void SetAimProvider(Func<Vector2> aimProvider)
+
+    {
+
+        _aimProvider = aimProvider;
+
+    }
+
+
+
+    public void ForceFlashlightState(bool enabled)
+
+    {
+
+        flashlightEnabled = enabled;
+
+        EnsureFlashlightState(forceRefresh: true);
+
+    }
+
+
+
     void HandleUpgradeChanged(UpgradeSnapshot snapshot)
     {
         EnsureFlashlightState(forceRefresh: true);
@@ -214,7 +272,6 @@ public class SonarPing : MonoBehaviour
         _flashlightVisual.SetAim(origin, dir);
     }
 
-    // ----------------------------------------------------
     // ----------------------------------------------------
     // Aim
     // ----------------------------------------------------
@@ -376,7 +433,27 @@ public class SonarPing : MonoBehaviour
         float height = thickness;
 
         var outline = impactPool.Get();
-        outline.Play(faceCenter, width, height, rotation, impactColor, impactLifetime);
+        outline.Play(faceCenter, width, height, rotation, GetImpactColor(faceCenter), impactLifetime);
+    }
+
+    Color GetImpactColor(Vector2 worldPoint)
+    {
+        if (!tintImpactsByExitDistance)
+            return impactColor;
+
+        var generator = RoomGenerator.Instance;
+        if (generator == null)
+            return impactColor;
+
+        float near = Mathf.Max(0.01f, exitNearDistance);
+        float far = Mathf.Max(near + 0.01f, exitFarDistance);
+        float distance = Vector2.Distance(worldPoint, generator.ExitPosition);
+        float t = Mathf.InverseLerp(near, far, distance);
+
+        if (t < 0.5f)
+            return Color.Lerp(exitNearColor, exitMidColor, t / 0.5f);
+
+        return Color.Lerp(exitMidColor, exitFarColor, (t - 0.5f) / 0.5f);
     }
 
     static Vector2 GetWorldSize(BoxCollider2D box)

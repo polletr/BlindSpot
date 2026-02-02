@@ -6,13 +6,17 @@ public class DungeonRunManager : Singleton<DungeonRunManager>
     [Min(1)] public int dungeonIndex = 1;
     [Min(1)] public int maxDungeon = 10;
 
+    [Header("Flow")]
+    [SerializeField] private bool generateOnStart = false;
+
     [Header("Seed (optional)")]
     public bool useFixedSeed = false;
     public int fixedSeed = 12345;
 
     private void Start()
     {
-        GenerateCurrentDungeon();
+        if (generateOnStart)
+            GenerateCurrentDungeon();
     }
 
     public void GenerateCurrentDungeon()
@@ -29,3 +33,4 @@ public class DungeonRunManager : Singleton<DungeonRunManager>
         GenerateCurrentDungeon();
     }
 }
+

@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d024bd5e83067e488a45fba41808a79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  <IsPersistent>k__BackingField: 1
+  <IsPersistent>k__BackingField: 0
   deathCamera: {fileID: 0}
   continueUI: {fileID: 0}
   deathCirclePrefab: {fileID: 5201959495623473135, guid: 3234eccc6f824a042b817a30909d9c30, type: 3}

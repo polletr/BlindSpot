@@ -11,6 +11,7 @@ public abstract class EnemyBase : MonoBehaviour
     protected PlayerController TargetPlayerController { get; private set; }
 
     UpgradeManager upgradeManager;
+    private EnemyVisibility _enemyVisibility;
     protected UpgradeManager UpgradeMgr
     {
         get
@@ -79,7 +80,8 @@ public abstract class EnemyBase : MonoBehaviour
         CachePlayerControllerReference();
         if (TryGetComponent(out EnemyVisibility enemyVis))
         {
-            enemyVis.player = player;
+            _enemyVisibility = enemyVis;
+            _enemyVisibility.player = player;
         }
 
         if (tips == null || tips.Count == 0)
@@ -93,6 +95,16 @@ public abstract class EnemyBase : MonoBehaviour
 
         PickActiveTip(force: true);
 
+    }
+
+    protected virtual void OnEnable()
+    {
+        SubscribeToPlayerSpawnEvents();
+    }
+
+    protected virtual void OnDisable()
+    {
+        UnsubscribeFromPlayerSpawnEvents();
     }
 
     protected virtual void Update()
@@ -234,6 +246,46 @@ public abstract class EnemyBase : MonoBehaviour
             TargetPlayerController = player.GetComponent<PlayerController>();
         else
             TargetPlayerController = null;
+    }
+
+    void AssignPlayerTarget(PlayerController controller)
+    {
+        player = controller != null ? controller.transform : null;
+        CachePlayerControllerReference();
+        if (_enemyVisibility != null)
+            _enemyVisibility.player = player;
+    }
+
+    void SubscribeToPlayerSpawnEvents()
+    {
+        if (!GameFlowManager.HasInstance)
+            return;
+
+        GameFlowManager.Instance.PlayerSpawned += HandleGlobalPlayerSpawned;
+
+        var current = GameFlowManager.Instance.CurrentPlayer;
+        if (current == null)
+        {
+            var session = GameFlowManager.Instance.ActiveRunSession;
+            if (session != null)
+                current = session.ActivePlayer;
+        }
+
+        if (current != null)
+            AssignPlayerTarget(current);
+    }
+
+    void UnsubscribeFromPlayerSpawnEvents()
+    {
+        if (!GameFlowManager.HasInstance)
+            return;
+
+        GameFlowManager.Instance.PlayerSpawned -= HandleGlobalPlayerSpawned;
+    }
+
+    void HandleGlobalPlayerSpawned(PlayerController controller)
+    {
+        AssignPlayerTarget(controller);
     }
 
     public void FreezeTipSelection(float duration)

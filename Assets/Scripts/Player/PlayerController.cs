@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using DG.Tweening;
@@ -41,6 +42,9 @@ public class PlayerController : MonoBehaviour
     // Status
     public bool IsDashing => _currentState == DashState;
     public bool IsDead => _currentState == DeadState;
+
+    public event Action<PlayerController> PlayerDied;
+    public event Action<PlayerController> PlayerRespawned;
 
     // Direction memory (for dash when no input)
     private Vector2 _lastMoveDir = Vector2.right;
@@ -207,6 +211,7 @@ public class PlayerController : MonoBehaviour
             sonar.ForceFlashlightState(false);
         }
         ChangeState(DeadState);
+        PlayerDied?.Invoke(this);
 
         Vector3 playerPos = visualRoot.transform.position;
 
@@ -220,7 +225,7 @@ public class PlayerController : MonoBehaviour
         var ctx = new DeathHitContext(playerPos, hitPointWorld, cutNormal, attackerTip);
         DeathDirector.Instance.PlayDeath(ctx, visualRoot.GetComponent<SpriteRenderer>());
 
-        Debug.Log("[Player] Kill triggered. TODO: fade to black and open shop UI.");
+        Debug.Log("[Player] Kill triggered. TODO: fade to black and open retry or main menu UI.");
     }
 
     public void Respawn(Vector2 position)
@@ -232,6 +237,7 @@ public class PlayerController : MonoBehaviour
             sonar.ForceFlashlightState(_flashlightEnabledBeforeKill);
 
         ChangeState(MoveState);
+        PlayerRespawned?.Invoke(this);
     }
 
     // ------------------------
@@ -298,3 +304,5 @@ public class PlayerController : MonoBehaviour
         return Mathf.Clamp01(_dashCooldownRemaining / cooldown);
     }
 }
+
+

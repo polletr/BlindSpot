@@ -102,7 +102,7 @@ GameObject:
   - component: {fileID: 4487427015563091525}
   - component: {fileID: 8852711280133463020}
   - component: {fileID: 1882259545392442307}
-  m_Layer: 9
+  m_Layer: 6
   m_Name: Tip (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -187,7 +187,7 @@ GameObject:
   - component: {fileID: 4291068463849789129}
   - component: {fileID: 1903434276918738385}
   - component: {fileID: 4754565833241027563}
-  m_Layer: 9
+  m_Layer: 6
   m_Name: TriangleEnemy
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -437,7 +437,7 @@ GameObject:
   - component: {fileID: 5865617732651256408}
   - component: {fileID: 6312961895793746483}
   - component: {fileID: 3353788517638187527}
-  m_Layer: 9
+  m_Layer: 6
   m_Name: Tip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -518,7 +518,7 @@ GameObject:
   - component: {fileID: 2622657355086082428}
   - component: {fileID: 5101922525829919915}
   - component: {fileID: 3779552640124699762}
-  m_Layer: 9
+  m_Layer: 6
   m_Name: Tip (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}

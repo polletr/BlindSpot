@@ -104,6 +104,18 @@ public class VirtualAimCursor : MonoBehaviour
         cam = overrideCam;
     }
 
+    public void SetCrosshair(RectTransform rect)
+    {
+        crosshairUI = rect;
+        if (crosshairUI != null)
+        {
+            crosshairGroup = crosshairUI.GetComponent<CanvasGroup>();
+            if (crosshairGroup == null)
+                crosshairGroup = crosshairUI.gameObject.AddComponent<CanvasGroup>();
+            ApplyUIPosition();
+        }
+    }
+
     public void OnLook(InputAction.CallbackContext ctx)
     {
         if (!ctx.performed && !ctx.canceled) return;

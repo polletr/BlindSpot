@@ -279,13 +279,14 @@ MonoBehaviour:
   angleDeg: 60
   obstacleMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 3072
   revealableMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 512
   piercingUpgrade: 0
   rayCount: 60
   conePool: {fileID: 0}
+  autoResolvePoolsFromHub: 1
   impactPool: {fileID: 0}
   impactColor: {r: 0.62, g: 0.92, b: 1, a: 0.8}
   impactLifetime: 2

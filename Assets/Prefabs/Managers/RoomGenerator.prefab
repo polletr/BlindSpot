@@ -80,8 +80,8 @@ MonoBehaviour:
   spawnInteriorObstacles: 1
   obstaclePrefabs:
   - {fileID: 6396508144029174501, guid: 893bb1c1020417346a43dd4d5f666638, type: 3}
-  obstacleMin: 15
-  obstacleMax: 26
+  obstacleMin: 22
+  obstacleMax: 32
   obstaclePlacementTries: 40
   wallInset: 0.6
   spawnSafeRadius: 3

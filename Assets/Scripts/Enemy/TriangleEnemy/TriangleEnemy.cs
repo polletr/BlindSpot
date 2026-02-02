@@ -9,12 +9,14 @@ public class TriangleEnemy : EnemyBase
     public float chargeDuration = 0.35f;
     public float dashDuration = 0.25f;
     public float dashSpeedMultiplier = 4f;
+    
     [Header("Dash Targeting")]
     public float directionCommitLeadTime = 0.08f;
     public ParticleSystem chargeVfx;
     [SerializeField] Transform shakeTarget;
     [SerializeField] float shakeStrength = 0.2f;
     [SerializeField] int shakeVibrato = 25;
+    
     [Header("Dash Stretch")]
     public float dashStretchAmount = 1.15f;
     public float dashSquashAmount = 0.85f;
@@ -29,6 +31,7 @@ public class TriangleEnemy : EnemyBase
     Tween dashStretchTween;
     Vector3 shakeTargetRestLocalPos;
     Vector3 dashVisualRestScale = Vector3.one;
+    
     [Header("Chase Behavior")]
     [SerializeField, Range(0f, 0.5f)] float chaseDirectionSmoothTime = 0.12f;
     [SerializeField, Range(1f, 4f)] float chaseSlowDistanceMultiplier = 1.75f;

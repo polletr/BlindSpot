@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class RoomGenerator : Singleton<RoomGenerator>
 {
@@ -78,6 +80,9 @@ public class RoomGenerator : Singleton<RoomGenerator>
     public Vector2 ExitPosition { get; private set; }
     public Bounds RoomBounds { get; private set; }
 
+    public event Action<RoomGenerationResult> GenerationCompleted;
+
+
     private readonly List<GameObject> _spawned = new();
     private readonly List<SpawnReservation> _spawnReservations = new();
 
@@ -126,6 +131,8 @@ public class RoomGenerator : Singleton<RoomGenerator>
         // 7) enemies + blops
         SpawnEnemies(dungeonIndex);
         SpawnBlops(dungeonIndex);
+
+        NotifyGenerationCompleted(dungeonIndex, maxDungeon);
     }
 
     private void PickRoomSize(out int width, out int height)
@@ -367,6 +374,13 @@ public class RoomGenerator : Singleton<RoomGenerator>
                 RegisterSpawnReservation(pos, blopSpawnRadius);
             }
         }
+    }
+
+    private void NotifyGenerationCompleted(int dungeonIndex, int maxDungeon)
+    {
+        if (GenerationCompleted == null) return;
+        var result = new RoomGenerationResult(PlayerSpawnPosition, ExitPosition, RoomBounds, dungeonIndex, maxDungeon);
+        GenerationCompleted.Invoke(result);
     }
 
     private GameObject PickEnemyPrefab(DungeonDifficultyConfig.DungeonRule rule, ref int starsSpawned)
