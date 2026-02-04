@@ -1,5 +1,4 @@
 using UnityEngine;
-
 public sealed class SquareChaseState : EnemyStateBase
 {
     public override void Enter(EnemyBase e)

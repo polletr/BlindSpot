@@ -16,27 +16,27 @@ MonoBehaviour:
   - dungeonIndex: 1
     minEnemies: 3
     maxEnemies: 6
-    squareWeight: 0
-    triangleWeight: 1
+    squareWeight: 1
+    triangleWeight: 0
     starWeight: 0
     maxStars: 0
-    minBlops: 3
+    minBlops: 8
     maxBlops: 15
   - dungeonIndex: 2
     minEnemies: 4
     maxEnemies: 7
-    squareWeight: 0
-    triangleWeight: 1
+    squareWeight: 0.8
+    triangleWeight: 0.2
     starWeight: 0
     maxStars: 0
-    minBlops: 5
-    maxBlops: 8
+    minBlops: 8
+    maxBlops: 15
   - dungeonIndex: 3
-    minEnemies: 2
-    maxEnemies: 3
-    squareWeight: 0
-    triangleWeight: 1
+    minEnemies: 5
+    maxEnemies: 8
+    squareWeight: 0.7
+    triangleWeight: 0.3
     starWeight: 0
     maxStars: 0
-    minBlops: 5
-    maxBlops: 8
+    minBlops: 8
+    maxBlops: 15

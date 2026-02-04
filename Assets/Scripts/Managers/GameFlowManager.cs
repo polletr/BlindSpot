@@ -24,6 +24,7 @@ public class GameFlowManager : Singleton<GameFlowManager>
     public event Action PlayerDied;
     public event Action PlayerRespawned;
     public event Action GameWon;
+    public event Action<int, int> BlopsChanged;
 
     protected override void Awake()
     {
@@ -209,5 +210,10 @@ public class GameFlowManager : Singleton<GameFlowManager>
             _runSession.SetPlayerInputEnabled(false);
 
         GameWon?.Invoke();
+    }
+
+    public void HandleBlopsChanged(int current, int total)
+    {
+        BlopsChanged?.Invoke(current, total);
     }
 }

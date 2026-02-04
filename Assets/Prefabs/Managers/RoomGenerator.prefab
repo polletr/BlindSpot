@@ -64,10 +64,10 @@ MonoBehaviour:
   exitPrefab: {fileID: 1902731795787987662, guid: 9047936d4a4331b47bfe1be77a237de8, type: 3}
   playerSpawnMarkerPrefab: {fileID: 0}
   difficultyConfig: {fileID: 11400000, guid: 8b0060debd69e56478feffc8769c8b47, type: 2}
-  squareEnemyPrefab: {fileID: 0}
+  squareEnemyPrefab: {fileID: 7802143703298462536, guid: a7023a6406d1cf246a5ec23eb06c7718, type: 3}
   triangleEnemyPrefab: {fileID: 5261239210734939324, guid: 0d9a4a29b1261654b823e45e6c86b575, type: 3}
   starEnemyPrefab: {fileID: 0}
-  blopPrefab: {fileID: 8377181638012513058, guid: 99bcf473a66c6644e9af52a8e57db1dd, type: 3}
+  blopPrefab: {fileID: 8899481710956657179, guid: b1c16b2d3729e9649b32f30609112aca, type: 3}
   blockedMask:
     serializedVersion: 2
     m_Bits: 0
@@ -91,5 +91,5 @@ MonoBehaviour:
   avoidEnemyOverlap: 1
   enemyMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   generatedRoot: {fileID: 0}

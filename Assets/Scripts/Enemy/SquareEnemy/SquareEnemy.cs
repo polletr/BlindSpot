@@ -177,7 +177,7 @@ public class SquareEnemy : EnemyBase
 
     public Vector2 GetSmoothedChaseDirection()
     {
-        Vector2 desired = DirToPlayer;
+        Vector2 desired = DirFromTipToPlayer();
         if (desired.sqrMagnitude < 0.0001f)
         {
             if (_smoothedChaseDir.sqrMagnitude < 0.0001f)
@@ -202,6 +202,19 @@ public class SquareEnemy : EnemyBase
                 _smoothedChaseDir = desired;
         }
         return _smoothedChaseDir.normalized;
+    }
+
+    Vector2 DirFromTipToPlayer()
+    {
+        if (!HasPlayer)
+            return DirToPlayer;
+
+        Transform origin = ActiveTip != null ? ActiveTip : transform;
+        Vector2 diff = (Vector2)player.position - (Vector2)origin.position;
+        if (diff.sqrMagnitude < 0.0001f)
+            return DirToPlayer;
+
+        return diff.normalized;
     }
 
     public float EvaluateChaseSpeedFraction()

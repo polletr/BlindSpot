@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using DG.Tweening;
 
@@ -34,12 +35,13 @@ public class CurrencyDrop : MonoBehaviour
     public string PoolKey { get; private set; }
 
     private Tween _delayTween;
+    private Coroutine _magnetCoroutine;
 
     private bool _magneting;
     private bool _collected;
 
     private Transform _target;
-    private CurrencyWallet _wallet;
+    private BlopWallet _wallet;
 
     // SmoothDamp state
     private Vector3 _vel;
@@ -55,6 +57,7 @@ public class CurrencyDrop : MonoBehaviour
     {
         _delayTween?.Kill();
         _delayTween = null;
+        StopMagnet(false);
 
         _magneting = false;
         _collected = false;
@@ -73,6 +76,7 @@ public class CurrencyDrop : MonoBehaviour
     {
         _delayTween?.Kill();
         _delayTween = null;
+        StopMagnet(false);
 
         _magneting = false;
         _collected = false;
@@ -91,13 +95,12 @@ public class CurrencyDrop : MonoBehaviour
         if (_collected) return;
         if (!IsPlayerLayer(other.gameObject.layer)) return;
 
-        var collector = other.GetComponentInParent<CurrencyCollector>();
-        if (collector == null) return;
-
-        var wallet = other.GetComponentInParent<CurrencyWallet>();
+        var wallet = other.GetComponentInParent<BlopWallet>();
         if (wallet == null) return;
 
-        _target = collector.Target;
+        if (!wallet.CanCollect) return;
+
+        _target = wallet.transform;
         _wallet = wallet;
 
         if (_magneting) return;
@@ -112,6 +115,13 @@ public class CurrencyDrop : MonoBehaviour
                 if (_collected) return;
                 if (_target == null || _wallet == null) return;
 
+                if (!_wallet.CanCollect)
+                {
+                    _target = null;
+                    _wallet = null;
+                    return;
+                }
+
                 StartMagnet();
             });
         }
@@ -124,13 +134,16 @@ public class CurrencyDrop : MonoBehaviour
 
         if (_wallet == null || _target == null)
         {
-            var collector = other.GetComponentInParent<CurrencyCollector>();
-            var wallet = other.GetComponentInParent<CurrencyWallet>();
-            if (collector == null || wallet == null) return;
+            var wallet = other.GetComponentInParent<BlopWallet>();
+            if (wallet == null) return;
 
-            _target = collector.Target;
+            if (!wallet.CanCollect) return;
+
+            _target = wallet.transform;
             _wallet = wallet;
         }
+
+        if (_wallet == null || !_wallet.CanCollect) return;
 
         CollectNow();
     }
@@ -144,56 +157,104 @@ public class CurrencyDrop : MonoBehaviour
     private void StartMagnet()
     {
         if (_collected || _magneting) return;
+        if (_wallet == null || !_wallet.CanCollect) return;
 
         _magneting = true;
         _magnetStartTime = Time.time;
         _vel = Vector3.zero;
 
-        // Once magneting, triggers are no longer needed.
         if (magnetTriggerCollider != null) magnetTriggerCollider.enabled = false;
         if (collectTriggerCollider != null) collectTriggerCollider.enabled = false;
+
+        _magnetCoroutine = StartCoroutine(MagnetRoutine());
     }
 
-    private void Update()
+    private void StopMagnet(bool reactivateColliders = true)
     {
-        if (!_magneting || _collected) return;
-        if (_target == null || _wallet == null) { CollectNow(); return; } // or stop magnet instead
+        if (_magnetCoroutine != null)
+        {
+            StopCoroutine(_magnetCoroutine);
+        }
 
-        Vector3 targetPos = _target.position;
-
-        // Optional ramp-up: starts smoother, then ramps to full maxSpeed
-        float ramp = 1f;
-        if (rampUpTime > 0f)
-            ramp = Mathf.Clamp01((Time.time - _magnetStartTime) / rampUpTime);
-
-        float effectiveMaxSpeed = maxSpeed * ramp;
-
-        transform.position = Vector3.SmoothDamp(
-            transform.position,
-            targetPos,
-            ref _vel,
-            smoothTime,
-            effectiveMaxSpeed,
-            Time.deltaTime
-        );
-
-        // Arrive check
-        if ((transform.position - targetPos).sqrMagnitude <= arriveDistance * arriveDistance)
-            CollectNow();
+        FinalizeMagnet(reactivateColliders);
     }
 
-    private void CollectNow()
+    private void FinalizeMagnet(bool reactivateColliders)
+    {
+        _magneting = false;
+        _magnetCoroutine = null;
+        _vel = Vector3.zero;
+        _magnetStartTime = 0f;
+        _target = null;
+        _wallet = null;
+
+        if (reactivateColliders)
+        {
+            if (magnetTriggerCollider != null) magnetTriggerCollider.enabled = true;
+            if (collectTriggerCollider != null) collectTriggerCollider.enabled = true;
+        }
+    }
+
+    private IEnumerator MagnetRoutine()
+    {
+        while (_magneting && !_collected)
+        {
+            if (_target == null || _wallet == null)
+            {
+                FinalizeMagnet(true);
+                yield break;
+            }
+
+            if (!_wallet.CanCollect)
+            {
+                FinalizeMagnet(true);
+                yield break;
+            }
+
+            Vector3 targetPos = _target.position;
+            float ramp = rampUpTime > 0f
+                ? Mathf.Clamp01((Time.time - _magnetStartTime) / rampUpTime)
+                : 1f;
+
+            float effectiveMaxSpeed = maxSpeed * ramp;
+
+            transform.position = Vector3.SmoothDamp(
+                transform.position,
+                targetPos,
+                ref _vel,
+                smoothTime,
+                effectiveMaxSpeed,
+                Time.deltaTime
+            );
+
+            if ((transform.position - targetPos).sqrMagnitude <= arriveDistance * arriveDistance)
+            {
+                CollectNow(false);
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
+
+    private void CollectNow(bool stopMagnetCoroutine = true)
     {
         if (_collected) return;
         _collected = true;
 
+        var wallet = _wallet;
+
+        if (stopMagnetCoroutine) StopMagnet(false);
+        else FinalizeMagnet(false);
+
         _delayTween?.Kill();
         _delayTween = null;
 
-        if (_wallet != null)
-            _wallet.Add(amount);
+        if (wallet != null)
+            wallet.Add(amount);
 
         if (_pool != null) _pool.Return(this);
         else gameObject.SetActive(false);
     }
 }
+

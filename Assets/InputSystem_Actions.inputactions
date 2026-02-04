@@ -25,7 +25,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "Ping",
+                    "name": "OnShoot",
                     "type": "Button",
                     "id": "6c2ab1b8-8984-453a-af3d-a3c78ae1679a",
                     "expectedControlType": "",
@@ -216,7 +216,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "Ping",
+                    "action": "OnShoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -227,7 +227,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Touch",
-                    "action": "Ping",
+                    "action": "OnShoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -238,7 +238,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Ping",
+                    "action": "OnShoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -249,7 +249,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "XR",
-                    "action": "Ping",
+                    "action": "OnShoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -260,7 +260,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Ping",
+                    "action": "OnShoot",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

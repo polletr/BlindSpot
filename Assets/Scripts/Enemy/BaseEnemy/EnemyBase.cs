@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
@@ -63,6 +64,19 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Debug")]
     public bool drawGizmos = true;
 
+    [Header("Combat")]
+    [SerializeField, Min(1)] private int maxHealth = 3;
+    [SerializeField, Tooltip("Delay before destroying corpses. Set negative to keep them around.")] private float deathCleanupDelay = 3f;
+    [SerializeField] private Animator deathAnimatorOverride;
+    [SerializeField] private string deathTriggerName = "Die";
+
+    public int CurrentHealth { get; private set; }
+    public bool IsDead { get; private set; }
+
+    public event Action<EnemyBase> EnemyDied;
+
+    private Collider2D[] _cachedColliders;
+
     protected IEnemyState currentState;
     protected bool IsTargetPlayerDead => TargetPlayerController != null && TargetPlayerController.IsDead;
 
@@ -95,10 +109,14 @@ public abstract class EnemyBase : MonoBehaviour
 
         PickActiveTip(force: true);
 
+        _cachedColliders = GetComponentsInChildren<Collider2D>(includeInactive: true);
+        CurrentHealth = Mathf.Max(1, maxHealth);
+        IsDead = false;
     }
 
     protected virtual void OnEnable()
     {
+        ResetDeathState();
         SubscribeToPlayerSpawnEvents();
     }
 
@@ -107,8 +125,21 @@ public abstract class EnemyBase : MonoBehaviour
         UnsubscribeFromPlayerSpawnEvents();
     }
 
+    protected virtual void ResetDeathState()
+    {
+        IsDead = false;
+        CurrentHealth = Mathf.Clamp(CurrentHealth <= 0 ? maxHealth : CurrentHealth, 1, maxHealth);
+        EnableAllColliders(true);
+        if (RB != null)
+        {
+            RB.linearVelocity = Vector2.zero;
+       }
+    }
+
     protected virtual void Update()
     {
+        if (IsDead) return;
+
         currentState?.Tick(this);
 
         if (!HasPlayer) return;
@@ -124,6 +155,13 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void FixedUpdate()
     {
+        if (IsDead)
+        {
+            if (RB != null)
+                RB.linearVelocity = Vector2.zero;
+            return;
+        }
+
         if (IsTargetPlayerDead)
         {
             StopMove();
@@ -169,6 +207,7 @@ public abstract class EnemyBase : MonoBehaviour
     // Basic “accelerated velocity” steering (feels consistent with your player)
     public void MoveInDirection(Vector2 dir, float speedMultiplier = 1f)
     {
+        if (IsDead) return;
         if (dir.sqrMagnitude < 0.0001f) return;
 
         Vector2 targetVel = dir.normalized * (CurrentMoveSpeed * speedMultiplier);
@@ -178,7 +217,67 @@ public abstract class EnemyBase : MonoBehaviour
 
     public void StopMove(float decel = 40f)
     {
+        if (IsDead) return;
         RB.linearVelocity = Vector2.MoveTowards(RB.linearVelocity, Vector2.zero, decel * Time.fixedDeltaTime);
+    }
+
+
+    public virtual void TakeDamage(int amount)
+    {
+        if (IsDead) return;
+
+        amount = Mathf.Max(1, amount);
+        CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
+
+        if (CurrentHealth <= 0)
+            HandleDeath();
+    }
+
+    protected virtual void HandleDeath()
+    {
+        if (IsDead) return;
+
+        IsDead = true;
+        CurrentHealth = 0;
+
+        currentState?.Exit(this);
+        currentState = null;
+
+        if (RB != null)
+        {
+            RB.linearVelocity = Vector2.zero;
+            RB.isKinematic = true;
+        }
+
+        EnableAllColliders(false);
+
+        Animator animator = ResolveDeathAnimator();
+        if (animator != null && !string.IsNullOrEmpty(deathTriggerName))
+            animator.SetTrigger(deathTriggerName);
+
+        EnemyDied?.Invoke(this);
+
+        if (deathCleanupDelay >= 0f)
+            Destroy(gameObject, deathCleanupDelay);
+    }
+
+    private Animator ResolveDeathAnimator()
+    {
+        if (deathAnimatorOverride != null)
+            return deathAnimatorOverride;
+        return GetComponentInChildren<Animator>();
+    }
+
+    private void EnableAllColliders(bool enabled)
+    {
+        if (_cachedColliders == null || _cachedColliders.Length == 0)
+            _cachedColliders = GetComponentsInChildren<Collider2D>(includeInactive: true);
+
+        foreach (var col in _cachedColliders)
+        {
+            if (col == null) continue;
+            col.enabled = enabled;
+        }
     }
 
     protected virtual void OnDrawGizmosSelected()
@@ -331,3 +430,4 @@ public abstract class EnemyBase : MonoBehaviour
         MoveInDirection(ForwardDir, speedMultiplier);
     }
 }
+

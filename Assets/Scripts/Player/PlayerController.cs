@@ -9,6 +9,7 @@ public class PlayerController : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private SonarPing sonar;
     [SerializeField] private VirtualAimCursor aimCursor;
+    [SerializeField] private BlopShooter blopShooter;
 
     [Header("Movement Tuning")]
     [SerializeField] private float moveSpeed = 6f;
@@ -101,15 +102,15 @@ public class PlayerController : MonoBehaviour
         RB.gravityScale = 0f;
         RB.freezeRotation = true;
 
-        if (sonar == null)
-            sonar = GetComponent<SonarPing>();
-
         if (aimCursor == null)
             aimCursor = GetComponent<VirtualAimCursor>();
         if (aimCursor == null)
             aimCursor = FindFirstObjectByType<VirtualAimCursor>();
         if (aimCursor != null)
             aimCursor.SetAimOrigin(transform);
+
+        if (blopShooter == null)
+            blopShooter = GetComponent<BlopShooter>();
 
         if (sonar == null) sonar = GetComponent<SonarPing>();
         if (sonar != null)
@@ -183,6 +184,13 @@ public class PlayerController : MonoBehaviour
     public void OnPing(InputAction.CallbackContext ctx)
     {
         // Manual sonar pulses have been retired; handler kept to consume the input action.
+    }
+
+    public void OnShoot(InputAction.CallbackContext ctx)
+    {
+        if (!ctx.performed) return;
+        if (IsDead) return;
+        blopShooter?.TryShoot();
     }
 
     // ------------------------
@@ -304,5 +312,6 @@ public class PlayerController : MonoBehaviour
         return Mathf.Clamp01(_dashCooldownRemaining / cooldown);
     }
 }
+
 
 
