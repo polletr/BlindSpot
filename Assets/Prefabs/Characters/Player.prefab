@@ -26,9 +26,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4654787618250187301}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0.004443967, w: 0.99999017}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 20, y: 20, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1194733540129125882}
@@ -101,6 +101,10 @@ MonoBehaviour:
   detectionMask:
     serializedVersion: 2
     m_Bits: 704
+  debugLogs: 0
+  debugGizmos: 1
+  gizmoRadiusColor: {r: 1, g: 0.9, b: 0.1, a: 0.15}
+  gizmoContactColor: {r: 0.1, g: 1, b: 0.6, a: 0.5}
 --- !u!1 &5767868427770200671
 GameObject:
   m_ObjectHideFlags: 0
@@ -135,7 +139,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 17.7, y: -0.20000002, z: 0}
-  m_LocalScale: {x: 0.02, y: 0.02, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3695370235987192155}
@@ -236,7 +240,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 8
+  m_Radius: 0.44
 --- !u!114 &662629426379676174
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -252,11 +256,11 @@ MonoBehaviour:
   sonar: {fileID: 4648510912414998760}
   aimCursor: {fileID: 6746528590404983058}
   blopShooter: {fileID: 534683125127606861}
-  moveSpeed: 2
+  moveSpeed: 4
   acceleration: 20
   deceleration: 20
-  dashSpeed: 8
-  dashDuration: 0.1
+  dashSpeed: 12
+  dashDuration: 0.2
   dashCooldown: 2
   allowDashWithoutInput: 1
   visualRoot: {fileID: 1210538903317992952}
@@ -289,7 +293,7 @@ MonoBehaviour:
     m_Bits: 3072
   revealableMask:
     serializedVersion: 2
-    m_Bits: 512
+    m_Bits: 576
   piercingUpgrade: 0
   rayCount: 60
   conePool: {fileID: 0}
@@ -541,7 +545,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 634915141
-  m_SortingLayer: 5
+  m_SortingLayer: 4
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4fdd17bd72016e144acee5a62e606a6b, type: 3}

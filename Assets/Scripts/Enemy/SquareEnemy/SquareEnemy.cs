@@ -31,6 +31,7 @@ public class SquareEnemy : EnemyBase
     Vector2 _smoothedChaseDir;
     Vector2 _chaseDirVelocity;
     Vector2 _chaseVelocityRef;
+    Vector2 _lastMoveIntent;
 
     public bool HasPatrolRoute => _patrolPointCount == _patrolPoints.Length;
     public Vector2 CurrentPatrolTarget => HasPatrolRoute ? _patrolPoints[_currentPatrolIndex] : (Vector2)transform.position;
@@ -38,6 +39,105 @@ public class SquareEnemy : EnemyBase
     public float PatrolArriveDistance => patrolPointReachDistance;
     public float PatrolSpeedMultiplier => Mathf.Max(0.05f, patrolSpeedFraction);
     public bool IsPlayerDead => IsTargetPlayerDead;
+
+    void SetMoveIntent(Vector2 dir)
+    {
+        if (dir.sqrMagnitude < 0.0001f)
+        {
+            _lastMoveIntent = Vector2.zero;
+            return;
+        }
+
+        _lastMoveIntent = dir.normalized;
+    }
+
+    public void ClearMoveIntent()
+    {
+        _lastMoveIntent = Vector2.zero;
+    }
+
+    bool TrySelectTipFacingDirection(Vector2 dir)
+    {
+        if (tips == null || tips.Count == 0)
+            return false;
+
+        Transform best = FindTipFacingDirection(dir);
+        if (best == null)
+            return false;
+
+        if (best == ActiveTip)
+            return true;
+
+        if (Time.time < _nextTipSwitchTime)
+            return false;
+
+        ActiveTip = best;
+        _nextTipSwitchTime = Time.time + tipSwitchCooldown;
+        return true;
+    }
+
+    Transform FindTipFacingDirection(Vector2 dir)
+    {
+        if (dir.sqrMagnitude < 0.0001f)
+            return null;
+
+        Vector2 normalized = dir.normalized;
+        Transform best = null;
+        float bestDot = -Mathf.Infinity;
+
+        foreach (Transform tip in tips)
+        {
+            if (tip == null || tip == transform)
+                continue;
+
+            if (!tip.name.ToLower().Contains("tip"))
+                continue;
+
+            Vector2 tipForward = GetTipForward(tip);
+            if (tipForward.sqrMagnitude < 0.0001f)
+                continue;
+
+            float dot = Vector2.Dot(tipForward.normalized, normalized);
+            if (dot > bestDot)
+            {
+                bestDot = dot;
+                best = tip;
+            }
+        }
+
+        return best;
+    }
+
+    protected override void UpdateActiveTip()
+    {
+        if (_lastMoveIntent.sqrMagnitude >= 0.0001f && TrySelectTipFacingDirection(_lastMoveIntent))
+            return;
+
+        base.UpdateActiveTip();
+    }
+
+    protected override bool TryGetDesiredFacingDirection(out Vector2 desiredDir)
+    {
+        if (_lastMoveIntent.sqrMagnitude >= 0.0001f)
+        {
+            desiredDir = _lastMoveIntent.normalized;
+            return true;
+        }
+
+        return base.TryGetDesiredFacingDirection(out desiredDir);
+    }
+
+    protected override Vector2 GetTipForward(Transform tip)
+    {
+        if (tip == null)
+            return transform.up;
+
+        Vector2 toTip = (Vector2)tip.position - (Vector2)transform.position;
+        if (toTip.sqrMagnitude < 0.0001f)
+            return transform.up;
+
+        return toTip.normalized;
+    }
 
     protected override void Awake()
     {
@@ -66,6 +166,7 @@ public class SquareEnemy : EnemyBase
     {
         _patrolPointCount = 0;
         _currentPatrolIndex = 0;
+        InvalidateNavPath();
     }
 
     bool GeneratePatrolRoute()
@@ -152,6 +253,7 @@ public class SquareEnemy : EnemyBase
             return;
 
         _currentPatrolIndex = (_currentPatrolIndex + 1) % _patrolPointCount;
+        InvalidateNavPath();
     }
 
     public float DistanceToPatrolPoint()
@@ -164,7 +266,14 @@ public class SquareEnemy : EnemyBase
         if (!HasPatrolRoute)
             return;
 
-        Vector2 dir = CurrentPatrolTarget - (Vector2)transform.position;
+        Vector2 dir = GetNavMeshDirection(CurrentPatrolTarget);
+        if (dir.sqrMagnitude < 0.0001f)
+        {
+            ClearMoveIntent();
+            return;
+        }
+
+        SetMoveIntent(dir);
         MoveInDirection(dir, PatrolSpeedMultiplier);
     }
 
@@ -177,7 +286,10 @@ public class SquareEnemy : EnemyBase
 
     public Vector2 GetSmoothedChaseDirection()
     {
-        Vector2 desired = DirFromTipToPlayer();
+        Vector2 desired = HasPlayer ? GetNavMeshDirection((Vector2)player.position) : Vector2.zero;
+        if (desired.sqrMagnitude < 0.0001f)
+            desired = DirFromTipToPlayer();
+
         if (desired.sqrMagnitude < 0.0001f)
         {
             if (_smoothedChaseDir.sqrMagnitude < 0.0001f)
@@ -241,7 +353,12 @@ public class SquareEnemy : EnemyBase
         Vector2 desiredVelocity = Vector2.zero;
         if (dir.sqrMagnitude >= 0.0001f && clampedFraction > 0f)
         {
+            SetMoveIntent(dir);
             desiredVelocity = dir.normalized * (CurrentMoveSpeed * chaseSpeedMultiplier * clampedFraction);
+        }
+        else
+        {
+            ClearMoveIntent();
         }
         SmoothChaseVelocity(desiredVelocity);
     }
@@ -280,3 +397,9 @@ public class SquareEnemy : EnemyBase
         }
     }
 }
+
+
+
+
+
+

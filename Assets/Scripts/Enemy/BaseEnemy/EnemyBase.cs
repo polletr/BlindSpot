@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
+using UnityEngine.AI;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public abstract class EnemyBase : MonoBehaviour
@@ -38,6 +39,16 @@ public abstract class EnemyBase : MonoBehaviour
     public float chaseCommitTime = 0.55f;
     public float repositionTime = 0.35f;
     public float stopDistance = 0.65f;
+ 
+    [Header("Navigation")]
+    [SerializeField, Min(0.05f)] float navMeshRepathInterval = 0.25f;
+    [SerializeField, Min(0.01f)] float navMeshRepathDistance = 0.4f;
+    [SerializeField, Min(0.01f)] float navMeshCornerTolerance = 0.1f;
+    [SerializeField, Min(0.01f)] float navMeshSampleDistance = 0.6f;
+    [SerializeField, Min(1f)] float navMeshSampleFallbackMultiplier = 3f;
+    [SerializeField] int navMeshAreaMask = NavMesh.AllAreas;
+ 
+
 
 
     [Header("Tips")]
@@ -76,6 +87,13 @@ public abstract class EnemyBase : MonoBehaviour
     public event Action<EnemyBase> EnemyDied;
 
     private Collider2D[] _cachedColliders;
+    NavMeshPath _navMeshPath;
+    Vector2 _navDestination;
+    int _navCornerIndex;
+    float _nextNavPathUpdateTime;
+    bool _navPathValid;
+    bool _hasNavDestination;
+ 
 
     protected IEnemyState currentState;
     protected bool IsTargetPlayerDead => TargetPlayerController != null && TargetPlayerController.IsDead;
@@ -130,6 +148,7 @@ public abstract class EnemyBase : MonoBehaviour
         IsDead = false;
         CurrentHealth = Mathf.Clamp(CurrentHealth <= 0 ? maxHealth : CurrentHealth, 1, maxHealth);
         EnableAllColliders(true);
+        InvalidateNavPath();
         if (RB != null)
         {
             RB.linearVelocity = Vector2.zero;
@@ -144,7 +163,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (!HasPlayer) return;
 
-        PickActiveTip(force: false);
+        UpdateActiveTip();
 
         if (ShouldRotateTowardPlayer)
             RotateSoActiveTipFacesPlayer();
@@ -295,6 +314,14 @@ public abstract class EnemyBase : MonoBehaviour
     // Tip logic
     // -----------------------------
 
+    protected virtual void UpdateActiveTip()
+    {
+        if (!HasPlayer)
+            return;
+
+        PickActiveTip(force: false);
+    }
+
     public void PickActiveTip(bool force)
     {
         if (!HasPlayer || tips.Count == 0) return;
@@ -393,20 +420,163 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     // -----------------------------
+    // Navigation
+    // -----------------------------
+
+    public void InvalidateNavPath()
+    {
+        _navPathValid = false;
+        _hasNavDestination = false;
+        _navCornerIndex = 0;
+        _nextNavPathUpdateTime = 0f;
+    }
+
+    protected Vector2 GetNavMeshDirection(Vector2 destination, bool forceRepath = false)
+    {
+        Vector2 fallback = destination - (Vector2)transform.position;
+        if (!EnsureNavPath(destination, forceRepath))
+            return fallback;
+
+        Vector2 currentPosition = transform.position;
+        if (!TryGetCurrentCorner(currentPosition, out Vector2 corner))
+            return fallback;
+
+        Vector2 toCorner = corner - currentPosition;
+        if (toCorner.sqrMagnitude < 0.0001f)
+            return fallback;
+
+        return toCorner;
+    }
+
+    bool EnsureNavPath(Vector2 destination, bool forceRepath)
+    {
+        float repathDistance = Mathf.Max(0.01f, navMeshRepathDistance);
+        bool needsRepath = forceRepath
+            || !_navPathValid
+            || !_hasNavDestination
+            || (destination - _navDestination).sqrMagnitude >= repathDistance * repathDistance
+            || Time.time >= _nextNavPathUpdateTime;
+
+        if (!needsRepath)
+            return true;
+
+        if (_navMeshPath == null)
+            _navMeshPath = new NavMeshPath();
+
+        Vector3 from = transform.position;
+        Vector3 to = new Vector3(destination.x, destination.y, from.z);
+
+        if (!TrySampleNavPosition(from, out Vector3 sampledFrom) || !TrySampleNavPosition(to, out Vector3 sampledTo))
+        {
+            _navPathValid = false;
+            _hasNavDestination = false;
+            return false;
+        }
+
+        if (NavMesh.CalculatePath(sampledFrom, sampledTo, navMeshAreaMask, _navMeshPath)
+            && _navMeshPath.status == NavMeshPathStatus.PathComplete
+            && _navMeshPath.corners.Length > 0)
+        {
+            _navPathValid = true;
+            _hasNavDestination = true;
+            _navDestination = destination;
+            _navCornerIndex = 0;
+        }
+        else
+        {
+            _navPathValid = false;
+            _hasNavDestination = false;
+        }
+
+        float interval = Mathf.Max(0.01f, navMeshRepathInterval);
+        _nextNavPathUpdateTime = Time.time + interval;
+        return _navPathValid;
+    }
+
+    bool TryGetCurrentCorner(Vector2 currentPosition, out Vector2 corner)
+    {
+        corner = Vector2.zero;
+        if (!_navPathValid || _navMeshPath == null || _navMeshPath.corners == null || _navMeshPath.corners.Length == 0)
+            return false;
+
+        float tolerance = Mathf.Max(0.005f, navMeshCornerTolerance);
+        while (_navCornerIndex < _navMeshPath.corners.Length)
+        {
+            Vector3 rawCorner = _navMeshPath.corners[_navCornerIndex];
+            corner = new Vector2(rawCorner.x, rawCorner.y);
+            float dist = Vector2.Distance(currentPosition, corner);
+            if (dist <= tolerance)
+            {
+                if (_navCornerIndex == _navMeshPath.corners.Length - 1)
+                    return false;
+
+                _navCornerIndex++;
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    bool TrySampleNavPosition(Vector3 origin, out Vector3 sampled)
+    {
+        float maxDistance = Mathf.Max(0.01f, navMeshSampleDistance);
+        if (NavMesh.SamplePosition(origin, out NavMeshHit hit, maxDistance, navMeshAreaMask))
+        {
+            sampled = hit.position;
+            return true;
+        }
+
+        float fallbackDistance = Mathf.Max(maxDistance * navMeshSampleFallbackMultiplier, maxDistance);
+        if (fallbackDistance > maxDistance
+            && NavMesh.SamplePosition(origin, out hit, fallbackDistance, navMeshAreaMask))
+        {
+            sampled = hit.position;
+            return true;
+        }
+
+        sampled = origin;
+        return false;
+    }
+
+    // -----------------------------
     // Orientation
     // -----------------------------
+
+    protected virtual bool TryGetDesiredFacingDirection(out Vector2 desiredDir)
+    {
+        desiredDir = Vector2.zero;
+        if (ActiveTip == null || !HasPlayer)
+            return false;
+
+        Vector2 toPlayer = (Vector2)player.position - (Vector2)ActiveTip.position;
+        if (toPlayer.sqrMagnitude < 0.0001f)
+            return false;
+
+        desiredDir = toPlayer.normalized;
+        return true;
+    }
+
+    protected virtual Vector2 GetTipForward(Transform tip)
+    {
+        if (tip == null)
+            return transform.up;
+        return tip.up;
+    }
 
     void RotateSoActiveTipFacesPlayer()
     {
         if (ActiveTip == null) return;
 
-        Vector2 toPlayer = (Vector2)player.position - (Vector2)ActiveTip.position;
-        if (toPlayer.sqrMagnitude < 0.0001f) return;
+        if (!TryGetDesiredFacingDirection(out Vector2 desiredDir))
+            return;
 
         // TIP FORWARD IS UP
-        Vector2 tipForward = ActiveTip.up;
+        Vector2 tipForward = GetTipForward(ActiveTip);
 
-        float angle = Vector2.SignedAngle(tipForward, toPlayer);
+        float angle = Vector2.SignedAngle(tipForward, desiredDir);
         float step = rotateSpeed * Time.deltaTime;
 
         transform.Rotate(0f, 0f, Mathf.Clamp(angle, -step, step));
@@ -421,7 +591,7 @@ public abstract class EnemyBase : MonoBehaviour
         get
         {
             if (ActiveTip == null) return transform.up;
-            return ActiveTip.up.normalized;
+            return GetTipForward(ActiveTip).normalized;
         }
     }
 
@@ -430,4 +600,9 @@ public abstract class EnemyBase : MonoBehaviour
         MoveInDirection(ForwardDir, speedMultiplier);
     }
 }
+
+
+
+
+
 

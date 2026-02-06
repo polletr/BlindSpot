@@ -1223,7 +1223,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 10
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1968,7 +1968,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 886251e9a18ece04ea8e61686c173e1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachinePositionComposer
-  CameraDistance: 10
+  CameraDistance: 15
   DeadZoneDepth: 0
   Composition:
     ScreenPosition: {x: 0, y: 0}
@@ -2012,7 +2012,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 34
-    OrthographicSize: 5
+    OrthographicSize: 10
     NearClipPlane: 0.3
     FarClipPlane: 1000
     Dutch: 0
@@ -3450,11 +3450,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1162227697810960568, guid: 36089a55c0b22ff4f917a7bbd0647d62, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 10.08057
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1162227697810960568, guid: 36089a55c0b22ff4f917a7bbd0647d62, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -2.9259
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1162227697810960568, guid: 36089a55c0b22ff4f917a7bbd0647d62, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3578,13 +3578,13 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 619394802}
   - {fileID: 598311674}
   - {fileID: 1765713380}
   - {fileID: 5364727683093888094}
   - {fileID: 7951995588586579224}
   - {fileID: 815050496}
   - {fileID: 1088853241}
-  - {fileID: 619394802}
   - {fileID: 147896058}
   - {fileID: 3188072764085241244}
   - {fileID: 1294178517}

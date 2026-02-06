@@ -5,6 +5,8 @@ public sealed class SquareChaseState : EnemyStateBase
     {
         var square = (SquareEnemy)e;
         square.ResetChaseSteering();
+        square.ClearMoveIntent();
+        square.InvalidateNavPath();
     }
 
     public override void Tick(EnemyBase e)

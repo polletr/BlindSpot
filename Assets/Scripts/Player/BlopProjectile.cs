@@ -1,4 +1,5 @@
 using DG.Tweening;
+using MoreMountains.Feedbacks;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -93,6 +94,8 @@ public class BlopProjectile : MonoBehaviour
         if (enemy != null)
         {
             enemy.TakeDamage(damage);
+            if (enemy.TryGetComponent<MMF_Player>(out MMF_Player hitFeedback))
+                hitFeedback.PlayFeedbacks();
             Destroy(gameObject);
         }
     }

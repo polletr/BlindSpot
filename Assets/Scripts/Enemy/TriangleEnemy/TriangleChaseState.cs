@@ -9,6 +9,7 @@ public sealed class TriangleChaseState : EnemyStateBase
         _chaseTimer = 0f;
         var t = (TriangleEnemy)e;
         t.ResetChaseSteering();
+        t.InvalidateNavPath();
     }
 
     public override void Tick(EnemyBase e)

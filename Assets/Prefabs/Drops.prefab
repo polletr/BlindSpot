@@ -166,7 +166,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 5
+  m_Radius: 0.06
 --- !u!1 &7179434605917409288
 GameObject:
   m_ObjectHideFlags: 0
@@ -235,7 +235,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 80
+  m_Radius: 0.3
 --- !u!114 &5366113443491650253
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -279,7 +279,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 16.675049, y: 0.835557, z: 0}
-  m_LocalScale: {x: 0.004, y: 0.004, z: 0.004}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1934366075450468733}
@@ -333,15 +333,15 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 634915141
-  m_SortingLayer: 3
+  m_SortingLayer: 4
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4fdd17bd72016e144acee5a62e606a6b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 6130fd022fca37844b333c94c39b6201, type: 3}
   m_Color: {r: 0.41037738, g: 0.9708525, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 16, y: 16}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -365,7 +365,7 @@ MonoBehaviour:
   magnetDelay: 0.1
   magnetDelayRandom: 0.1
   smoothTime: 0.08
-  maxSpeed: 45
+  maxSpeed: 60
   arriveDistance: 0.08
   rampUpTime: 0.1
   magnetTriggerCollider: {fileID: 1753398069351074707}

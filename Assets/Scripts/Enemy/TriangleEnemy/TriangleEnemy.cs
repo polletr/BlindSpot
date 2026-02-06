@@ -212,7 +212,10 @@ public class TriangleEnemy : EnemyBase
 
     public Vector2 GetSmoothedChaseDirection()
     {
-        Vector2 desired = DirToPlayer;
+        Vector2 desired = HasPlayer ? GetNavMeshDirection((Vector2)player.position) : Vector2.zero;
+        if (desired.sqrMagnitude < 0.0001f)
+            desired = DirToPlayer;
+
         if (desired.sqrMagnitude < 0.0001f)
         {
             if (smoothedChaseDir.sqrMagnitude < 0.0001f)

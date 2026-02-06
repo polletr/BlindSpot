@@ -9,6 +9,11 @@ public class PlayerVisionField : MonoBehaviour
 
     [SerializeField] Light2D visionLight;
     [SerializeField] LayerMask detectionMask = ~0;
+    [Header("Debug")]
+    [SerializeField] bool debugLogs = false;
+    [SerializeField] bool debugGizmos = true;
+    [SerializeField] Color gizmoRadiusColor = new Color(1f, 0.9f, 0.1f, 0.15f);
+    [SerializeField] Color gizmoContactColor = new Color(0.1f, 1f, 0.6f, 0.5f);
 
     readonly HashSet<EnemyVisibility> currentEnemies = new();
     readonly HashSet<Revealable> currentRevealables = new();
@@ -110,21 +115,9 @@ public class PlayerVisionField : MonoBehaviour
     {
         if (visionLight == null)
             return;
+        
+        visionLight.pointLightOuterRadius = radius;
 
-        switch (visionLight.lightType)
-        {
-            case Light2D.LightType.Point:
-                visionLight.pointLightOuterRadius = radius;
-                break;
-            case Light2D.LightType.Freeform:
-            case Light2D.LightType.Parametric:
-            case Light2D.LightType.Sprite:
-                visionLight.shapeLightFalloffSize = radius;
-                break;
-            default:
-                visionLight.pointLightOuterRadius = radius;
-                break;
-        }
     }
 
     void Update()
@@ -147,18 +140,9 @@ public class PlayerVisionField : MonoBehaviour
     float GetLightOuterRadius()
     {
         if (visionLight == null) return 0f;
+        
+        return visionLight.pointLightOuterRadius;
 
-        switch (visionLight.lightType)
-        {
-            case Light2D.LightType.Point:
-                return visionLight.pointLightOuterRadius;
-            case Light2D.LightType.Freeform:
-            case Light2D.LightType.Parametric:
-            case Light2D.LightType.Sprite:
-                return visionLight.shapeLightFalloffSize;
-            default:
-                return visionLight.pointLightOuterRadius;
-        }
     }
 
     bool ShouldIgnore(Collider2D other)
@@ -186,52 +170,12 @@ public class PlayerVisionField : MonoBehaviour
             Collider2D col = hits[i];
             if (ShouldIgnore(col)) continue;
 
-            var enemy = col.GetComponentInParent<EnemyVisibility>();
-            if (enemy != null)
-                frameEnemies.Add(enemy);
-
-            var revealable = col.GetComponentInParent<Revealable>();
-            if (revealable != null)
-                frameRevealables.Add(revealable);
+            AddContact(col, frameEnemies);
+            AddContact(col, frameRevealables);
         }
 
-        foreach (var enemy in frameEnemies)
-        {
-            if (enemy == null) continue;
-            if (currentEnemies.Add(enemy))
-                enemy.SetVisionContact(true);
-        }
-
-        exitEnemies.Clear();
-        foreach (var enemy in currentEnemies)
-        {
-            if (!frameEnemies.Contains(enemy))
-                exitEnemies.Add(enemy);
-        }
-        foreach (var enemy in exitEnemies)
-        {
-            currentEnemies.Remove(enemy);
-            enemy.SetVisionContact(false);
-        }
-
-        foreach (var reveal in frameRevealables)
-        {
-            if (reveal == null) continue;
-            if (currentRevealables.Add(reveal))
-                reveal.SetVisionContact(true);
-        }
-
-        exitRevealables.Clear();
-        foreach (var reveal in currentRevealables)
-        {
-            if (!frameRevealables.Contains(reveal))
-                exitRevealables.Add(reveal);
-        }
-        foreach (var reveal in exitRevealables)
-        {
-            currentRevealables.Remove(reveal);
-            reveal.SetVisionContact(false);
-        }
+        UpdateEnemyContacts();
+        UpdateRevealableContacts();
     }
 
     void ClearAllContacts()
@@ -270,5 +214,100 @@ public class PlayerVisionField : MonoBehaviour
         if (revealable == null) return;
         if (currentRevealables.Remove(revealable))
             revealable.SetVisionContact(false);
+    }
+
+    void AddContact<T>(Collider2D col, HashSet<T> set) where T : Component
+    {
+        if (col == null) return;
+        var target = col.GetComponentInParent<T>();
+        if (target != null)
+            set.Add(target);
+    }
+
+    void UpdateEnemyContacts()
+    {
+        foreach (var enemy in frameEnemies)
+        {
+            if (enemy == null) continue;
+            if (currentEnemies.Add(enemy))
+            {
+                enemy.SetVisionContact(true);
+                LogContact("Enemy enter", enemy);
+            }
+        }
+
+        exitEnemies.Clear();
+        foreach (var enemy in currentEnemies)
+        {
+            if (!frameEnemies.Contains(enemy))
+                exitEnemies.Add(enemy);
+        }
+        foreach (var enemy in exitEnemies)
+        {
+            currentEnemies.Remove(enemy);
+            enemy.SetVisionContact(false);
+            LogContact("Enemy exit", enemy);
+        }
+    }
+
+    void UpdateRevealableContacts()
+    {
+        foreach (var reveal in frameRevealables)
+        {
+            if (reveal == null) continue;
+            if (currentRevealables.Add(reveal))
+            {
+                reveal.SetVisionContact(true);
+                LogContact("Reveal enter", reveal);
+            }
+        }
+
+        exitRevealables.Clear();
+        foreach (var reveal in currentRevealables)
+        {
+            if (!frameRevealables.Contains(reveal))
+                exitRevealables.Add(reveal);
+        }
+        foreach (var reveal in exitRevealables)
+        {
+            currentRevealables.Remove(reveal);
+            reveal.SetVisionContact(false);
+            LogContact("Reveal exit", reveal);
+        }
+    }
+
+    void LogContact(string label, Component target)
+    {
+        if (!debugLogs || target == null) return;
+        Debug.Log($"[Vision] {label}: {target.name}", target);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (!debugGizmos) return;
+
+        if (visionLight == null)
+            visionLight = GetComponent<Light2D>();
+
+        float radius = cachedOuterRadius;
+        if (radius <= 0f && visionLight != null)
+            radius = visionLight.pointLightOuterRadius;
+
+        Gizmos.color = gizmoRadiusColor;
+        Gizmos.DrawWireSphere(transform.position, radius);
+
+        Gizmos.color = gizmoContactColor;
+        foreach (var enemy in currentEnemies)
+        {
+            if (enemy == null) continue;
+            Gizmos.DrawLine(transform.position, enemy.transform.position);
+            Gizmos.DrawSphere(enemy.transform.position, 0.05f);
+        }
+        foreach (var reveal in currentRevealables)
+        {
+            if (reveal == null) continue;
+            Gizmos.DrawLine(transform.position, reveal.transform.position);
+            Gizmos.DrawSphere(reveal.transform.position, 0.04f);
+        }
     }
 }

@@ -3,6 +3,8 @@ public sealed class SquareIdleState : EnemyStateBase
     public override void Enter(EnemyBase e)
     {
         e.StopMove(80f);
+        var square = (SquareEnemy)e;
+        square.ClearMoveIntent();
     }
 
     public override void Tick(EnemyBase e)
@@ -22,5 +24,7 @@ public sealed class SquareIdleState : EnemyStateBase
     public override void FixedTick(EnemyBase e)
     {
         e.StopMove();
+        var square = (SquareEnemy)e;
+        square.ClearMoveIntent();
     }
 }

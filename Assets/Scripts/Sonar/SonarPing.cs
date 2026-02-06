@@ -97,9 +97,12 @@ public class SonarPing : MonoBehaviour
     private float EffectiveFlashlightAngle => angleDeg * (UpgradeMgr != null ? UpgradeMgr.FlashlightAngleMultiplier : 1f);
     private bool ShouldFlashlightBeActive => flashlightEnabled || (UpgradeMgr != null && UpgradeMgr.RadarAlwaysOn);
     PlayerVisionField VisionField => PlayerVisionField.Instance;
+    const string EnemyLayerName = "Enemies";
+    const string RevealableLayerName = "Revealables";
 
     void OnEnable()
     {
+        EnsureRevealableMask();
         if (autoResolvePoolsFromHub)
         {
             SonarPoolHub.PoolsChanged += HandlePoolsChanged;
@@ -122,6 +125,22 @@ public class SonarPing : MonoBehaviour
             _upgradeManager.UpgradesChanged -= HandleUpgradeChanged;
             _upgradeManager = null;
         }
+    }
+
+    void OnValidate()
+    {
+        EnsureRevealableMask();
+    }
+
+    void EnsureRevealableMask()
+    {
+        int enemyLayer = LayerMask.NameToLayer(EnemyLayerName);
+        if (enemyLayer >= 0)
+            revealableMask |= (1 << enemyLayer);
+
+        int revealableLayer = LayerMask.NameToLayer(RevealableLayerName);
+        if (revealableLayer >= 0)
+            revealableMask |= (1 << revealableLayer);
     }
 
     // ----------------------------------------------------

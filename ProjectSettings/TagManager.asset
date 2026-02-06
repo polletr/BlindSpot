@@ -45,9 +45,6 @@ TagManager:
   - name: Obstacles
     uniqueID: 1759355267
     locked: 0
-  - name: Revealables
-    uniqueID: 659414689
-    locked: 0
   - name: Blops
     uniqueID: 2372591637
     locked: 0
@@ -59,6 +56,9 @@ TagManager:
     locked: 0
   - name: FX
     uniqueID: 1784165065
+    locked: 0
+  - name: Revealables
+    uniqueID: 659414689
     locked: 0
   m_RenderingLayers:
   - Default
