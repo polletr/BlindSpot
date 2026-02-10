@@ -223,7 +223,7 @@ MonoBehaviour:
   damage: 1
   damageLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 3136
   useSquish: 1
   stretchAmount: 1.2
   squashAmount: 0.85

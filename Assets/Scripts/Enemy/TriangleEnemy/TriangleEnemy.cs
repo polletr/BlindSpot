@@ -67,6 +67,13 @@ public class TriangleEnemy : EnemyBase
         smoothedChaseDir = ForwardDir;
         ChangeState(IdleState);
     }
+
+    protected override void OnDamaged()
+    {
+        if (IsDead || IsPlayerDead) return;
+        if (HasPlayer)
+            ChangeState(ChaseState);
+    }
     public bool ReadyToCharge()
     {
         if (!HasPlayer || IsPlayerDead) return false;

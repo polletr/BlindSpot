@@ -98,6 +98,10 @@ public class BlopProjectile : MonoBehaviour
                 hitFeedback.PlayFeedbacks();
             Destroy(gameObject);
         }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     private bool IsDamageLayer(int layer)

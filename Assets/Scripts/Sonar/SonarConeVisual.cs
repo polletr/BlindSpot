@@ -11,6 +11,12 @@ public class SonarConeVisual : MonoBehaviour
     [Range(0f, 1f)] public float maxAlpha = 0.12f;
     [Tooltip("Time constant (seconds) used to smooth flashlight aim.")]
     public float aimSmoothTime = 0.08f;
+    [Tooltip("Pulls ray hit points slightly inward to reduce edge jitter/leaks.")]
+    public float hitInset = 0.02f;
+    [Tooltip("Time constant (seconds) used to smooth per-ray distances in continuous mode.")]
+    public float distanceSmoothTime = 0.05f;
+    [Tooltip("Keeps recent ray hits for a short time to avoid edge flicker.")]
+    public float hitHoldTime = 0.03f;
 
     static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
 
@@ -47,6 +53,11 @@ public class SonarConeVisual : MonoBehaviour
     Vector2 _manualOrigin;
     bool _hasManualOrigin;
 
+    float[] _smoothedDistances;
+    float[] _distanceVelocities;
+    float[] _lastHitDistances;
+    float[] _lastHitTimes;
+
     void Awake()
     {
         mr = GetComponent<MeshRenderer>();
@@ -76,6 +87,10 @@ public class SonarConeVisual : MonoBehaviour
         _colorTween = null;
         _continuousActive = false;
         _forwardVelocity = Vector2.zero;
+        _smoothedDistances = null;
+        _distanceVelocities = null;
+        _lastHitDistances = null;
+        _lastHitTimes = null;
     }
 
     public void BeginContinuous(
@@ -95,6 +110,7 @@ public class SonarConeVisual : MonoBehaviour
         _obstacleMask = obstacleMask;
         _piercing = piercing;
         _rayCount = Mathf.Max(2, rayCount);
+        EnsureRayBuffers(_rayCount);
 
         _restRange = Mathf.Max(0f, range);
         _restAlpha = (alpha >= 0f) ? Mathf.Clamp01(alpha) : maxAlpha;
@@ -232,6 +248,7 @@ public class SonarConeVisual : MonoBehaviour
         _obstacleMask = obstacleMask;
         _piercing = piercing;
         _rayCount = Mathf.Max(2, rayCount);
+        EnsureRayBuffers(_rayCount);
 
         mr.enabled = true;
         _currentRange = 0f;
@@ -263,7 +280,7 @@ public class SonarConeVisual : MonoBehaviour
         _rangeTween = seq;
     }
 
-    void Update()
+    void LateUpdate()
     {
         if (!mr.enabled) return;
 
@@ -366,14 +383,55 @@ public class SonarConeVisual : MonoBehaviour
             float a = startAng + step * i;
             Vector2 dir = Rotate(forward, a);
 
-            Vector2 endWorld = origin + dir * range;
+            float desiredDistance = range;
+            bool hasHit = false;
 
             if (!piercing)
             {
                 var hit = Physics2D.Raycast(origin, dir, range, obstacleMask);
-                if (hit.collider != null) endWorld = hit.point;
+                if (hit.collider != null)
+                {
+                    float inset = Mathf.Max(0f, hitInset);
+                    desiredDistance = Mathf.Max(0f, hit.distance - inset);
+                    hasHit = true;
+                }
             }
 
+            if (!hasHit && hitHoldTime > 0f && _lastHitTimes != null && i < _lastHitTimes.Length)
+            {
+                float lastTime = _lastHitTimes[i];
+                if (lastTime > 0f && (Time.time - lastTime) <= hitHoldTime)
+                {
+                    float lastDist = _lastHitDistances[i];
+                    if (lastDist > 0f && lastDist < range)
+                        desiredDistance = lastDist;
+                }
+            }
+
+            if (hasHit && _lastHitTimes != null && i < _lastHitTimes.Length)
+            {
+                _lastHitTimes[i] = Time.time;
+                _lastHitDistances[i] = desiredDistance;
+            }
+
+            float finalDistance = desiredDistance;
+            if (_continuousActive && distanceSmoothTime > 0f && _smoothedDistances != null && i < _smoothedDistances.Length)
+            {
+                if (_smoothedDistances[i] <= 0f)
+                    _smoothedDistances[i] = desiredDistance;
+
+                finalDistance = Mathf.SmoothDamp(
+                    _smoothedDistances[i],
+                    desiredDistance,
+                    ref _distanceVelocities[i],
+                    Mathf.Max(0.0001f, distanceSmoothTime),
+                    Mathf.Infinity,
+                    Time.deltaTime);
+
+                _smoothedDistances[i] = finalDistance;
+            }
+
+            Vector2 endWorld = origin + dir * finalDistance;
             Vector2 endLocal = endWorld - origin;
             verts.Add(endLocal);
         }
@@ -388,6 +446,24 @@ public class SonarConeVisual : MonoBehaviour
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateBounds();
         mesh.bounds = new Bounds(Vector3.zero, Vector3.one * (range * 2f + 1f));
+    }
+
+    void EnsureRayBuffers(int count)
+    {
+        if (count <= 0)
+        {
+            _smoothedDistances = null;
+            _distanceVelocities = null;
+            return;
+        }
+
+        if (_smoothedDistances == null || _smoothedDistances.Length != count)
+        {
+            _smoothedDistances = new float[count];
+            _distanceVelocities = new float[count];
+            _lastHitDistances = new float[count];
+            _lastHitTimes = new float[count];
+        }
     }
 
     static Vector2 Rotate(Vector2 v, float degrees)

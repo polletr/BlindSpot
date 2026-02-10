@@ -149,6 +149,13 @@ public class SquareEnemy : EnemyBase
         ChangeState(IdleState);
     }
 
+    protected override void OnDamaged()
+    {
+        if (IsDead || IsPlayerDead) return;
+        if (HasPlayer)
+            ChangeState(ChaseState);
+    }
+
     void Start()
     {
         EnsurePatrolRoute();

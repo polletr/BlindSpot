@@ -18,9 +18,18 @@ public class SonarPing : MonoBehaviour
 
     [Tooltip("If true, flashlight cone also draws wall outlines continuously (helps navigation).")]
     public bool flashlightDrawWallOutlines = false;
-
-    [Header("Flashlight Colors")]
     public Color flashlightColor = new Color(0.85f, 0.92f, 1f, 1f);
+
+    [Header("Flashlight Stabilization")]
+    [Tooltip("Seconds to smooth aim direction. 0 = no smoothing.")]
+    public float aimSmoothTime = 0.05f;
+
+    [Tooltip("Seconds to smooth origin position (helps when rubbing walls). 0 = no smoothing.")]
+    public float originSmoothTime = 0.03f;
+
+    [Tooltip("If true, reads origin from Rigidbody2D.position (better with physics).")]
+    public bool useRigidbodyOrigin = true;
+
 
     [Header("Reveal")]
     [Tooltip("If true the flashlight continuously reveals targets in its cone.")]
@@ -78,6 +87,19 @@ public class SonarPing : MonoBehaviour
     // Persistent visual instance (from pool)
     SonarConeVisual _flashlightVisual; // assume this is the type returned by conePool.Get()
 
+    Rigidbody2D _rb;
+
+    float _flashlightAccum;
+    Vector2 _smoothedOrigin;
+    Vector2 _originVel;
+
+    Vector2 _smoothedDir;
+    Vector2 _dirVel;
+    private void Awake()
+    {
+        _rb = GetComponent<Rigidbody2D>();
+    }
+
     private UpgradeManager UpgradeMgr
     {
         get
@@ -117,7 +139,7 @@ public class SonarPing : MonoBehaviour
         if (autoResolvePoolsFromHub)
             SonarPoolHub.PoolsChanged -= HandlePoolsChanged;
 
-        StopFlashlight();
+        //StopFlashlight();
         HideFlashlightVisual();
 
         if (_upgradeManager != null)
@@ -131,6 +153,49 @@ public class SonarPing : MonoBehaviour
     {
         EnsureRevealableMask();
     }
+
+    void LateUpdate()
+    {
+        if (!ShouldFlashlightBeActive || _flashlightVisual == null)
+            return;
+
+        _flashlightAccum += Time.deltaTime;
+
+        // throttle to your interval, but stay render-synced
+        if (_flashlightAccum < flashlightUpdateInterval)
+            return;
+
+        _flashlightAccum = 0f;
+
+        Vector2 rawOrigin = GetRawOrigin();
+        Vector2 rawDir = GetAimDir();
+        if (rawDir.sqrMagnitude <= 0.0001f) rawDir = _smoothedDir;
+        rawDir.Normalize();
+
+        // Smooth origin (stabilizes collision micro-corrections)
+        if (originSmoothTime > 0f)
+            _smoothedOrigin = Vector2.SmoothDamp(_smoothedOrigin, rawOrigin, ref _originVel, originSmoothTime);
+        else
+            _smoothedOrigin = rawOrigin;
+
+        // Smooth aim (prevents edge buzzing when raycasts toggle between two nearby hits)
+        if (aimSmoothTime > 0f)
+            _smoothedDir = Vector2.SmoothDamp(_smoothedDir, rawDir, ref _dirVel, aimSmoothTime);
+        else
+            _smoothedDir = rawDir;
+
+        if (_smoothedDir.sqrMagnitude > 0.0001f)
+            _smoothedDir.Normalize();
+
+        UpdateFlashlightVisual(_smoothedOrigin, _smoothedDir);
+
+        if (flashlightDrawWallOutlines)
+            SpawnWallOutlines(_smoothedOrigin, _smoothedDir, EffectiveFlashlightRange);
+
+        if (flashlightReveals)
+            RevealInCone(_smoothedOrigin, _smoothedDir, flashlightRevealDuration);
+    }
+
 
     void EnsureRevealableMask()
     {
@@ -225,19 +290,35 @@ public class SonarPing : MonoBehaviour
     void EnsureFlashlightState(bool forceRefresh = false)
     {
         bool shouldRun = ShouldFlashlightBeActive;
-        bool running = _flashlightRoutine != null;
 
         if (shouldRun)
         {
-            if (forceRefresh || !running)
-                StartFlashlight();
+            EnsureFlashlightVisual();
+            ShowFlashlightVisual();
+
+            // init smoothing buffers once
+            Vector2 rawOrigin = GetRawOrigin();
+            _smoothedOrigin = rawOrigin;
+
+            Vector2 rawDir = GetAimDir();
+            _smoothedDir = rawDir.sqrMagnitude > 0.0001f ? rawDir.normalized : Vector2.right;
+
+            _flashlightAccum = 0f;
         }
-        else if (running)
+        else
         {
-            StopFlashlight();
             HideFlashlightVisual();
         }
     }
+
+    Vector2 GetRawOrigin()
+    {
+        if (useRigidbodyOrigin && _rb != null)
+            return _rb.position;
+
+        return (Vector2)transform.position;
+    }
+
 
     IEnumerator FlashlightRoutine()
     {

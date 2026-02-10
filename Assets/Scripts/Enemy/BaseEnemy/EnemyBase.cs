@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
@@ -81,12 +82,18 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] private Animator deathAnimatorOverride;
     [SerializeField] private string deathTriggerName = "Die";
 
+    [Header("Death VFX")]
+    [SerializeField] private ParticleSystem deathVfx;
+    [SerializeField] private bool disableSpritesOnDeath = true;
+    [SerializeField] private List<SpriteRenderer> spritesToDisable = new();
+
     public int CurrentHealth { get; private set; }
     public bool IsDead { get; private set; }
 
     public event Action<EnemyBase> EnemyDied;
 
     private Collider2D[] _cachedColliders;
+    Coroutine _deathCleanupRoutine;
     NavMeshPath _navMeshPath;
     Vector2 _navDestination;
     int _navCornerIndex;
@@ -130,6 +137,8 @@ public abstract class EnemyBase : MonoBehaviour
         _cachedColliders = GetComponentsInChildren<Collider2D>(includeInactive: true);
         CurrentHealth = Mathf.Max(1, maxHealth);
         IsDead = false;
+        if (disableSpritesOnDeath)
+            SetSpritesVisible(true);
     }
 
     protected virtual void OnEnable()
@@ -146,6 +155,8 @@ public abstract class EnemyBase : MonoBehaviour
     protected virtual void ResetDeathState()
     {
         IsDead = false;
+        if (disableSpritesOnDeath)
+            SetSpritesVisible(true);
         CurrentHealth = Mathf.Clamp(CurrentHealth <= 0 ? maxHealth : CurrentHealth, 1, maxHealth);
         EnableAllColliders(true);
         InvalidateNavPath();
@@ -250,6 +261,12 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (CurrentHealth <= 0)
             HandleDeath();
+        else
+            OnDamaged();
+    }
+
+    protected virtual void OnDamaged()
+    {
     }
 
     protected virtual void HandleDeath()
@@ -265,7 +282,6 @@ public abstract class EnemyBase : MonoBehaviour
         if (RB != null)
         {
             RB.linearVelocity = Vector2.zero;
-            RB.isKinematic = true;
         }
 
         EnableAllColliders(false);
@@ -276,8 +292,19 @@ public abstract class EnemyBase : MonoBehaviour
 
         EnemyDied?.Invoke(this);
 
-        if (deathCleanupDelay >= 0f)
+        if (disableSpritesOnDeath)
+            SetSpritesVisible(false);
+
+        if (deathVfx != null)
+        {
+            if (_deathCleanupRoutine != null)
+                StopCoroutine(_deathCleanupRoutine);
+            _deathCleanupRoutine = StartCoroutine(DestroyAfterDeathVfx());
+        }
+        else if (deathCleanupDelay >= 0f)
+        {
             Destroy(gameObject, deathCleanupDelay);
+        }
     }
 
     private Animator ResolveDeathAnimator()
@@ -297,6 +324,42 @@ public abstract class EnemyBase : MonoBehaviour
             if (col == null) continue;
             col.enabled = enabled;
         }
+    }
+
+    void CacheSpriteRenderers()
+    {
+        if (spritesToDisable == null)
+            spritesToDisable = new List<SpriteRenderer>();
+        if (spritesToDisable.Count == 0)
+            spritesToDisable.AddRange(GetComponentsInChildren<SpriteRenderer>(includeInactive: true));
+    }
+
+    void SetSpritesVisible(bool visible)
+    {
+        if (spritesToDisable == null || spritesToDisable.Count == 0)
+            CacheSpriteRenderers();
+
+        foreach (var sr in spritesToDisable)
+        {
+            if (sr == null) continue;
+            sr.enabled = visible;
+        }
+    }
+
+    IEnumerator DestroyAfterDeathVfx()
+    {
+        if (deathVfx == null)
+            yield break;
+
+        if (!deathVfx.gameObject.activeInHierarchy)
+            deathVfx.gameObject.SetActive(true);
+
+        deathVfx.Play(true);
+
+        while (deathVfx != null && deathVfx.IsAlive(true))
+            yield return null;
+
+        Destroy(gameObject);
     }
 
     protected virtual void OnDrawGizmosSelected()
