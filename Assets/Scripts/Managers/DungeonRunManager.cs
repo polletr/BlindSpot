@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class DungeonRunManager : Singleton<DungeonRunManager>
@@ -6,31 +7,53 @@ public class DungeonRunManager : Singleton<DungeonRunManager>
     [Min(1)] public int dungeonIndex = 1;
     [Min(1)] public int maxDungeon = 10;
 
-    [Header("Flow")]
-    [SerializeField] private bool generateOnStart = false;
+    [Header("Difficulty")]
+    public DungeonDifficultyConfig difficultyConfig;
 
-    [Header("Seed (optional)")]
-    public bool useFixedSeed = false;
-    public int fixedSeed = 12345;
+    [Header("Level List")]
+    public List<LevelController> levelPrefabs = new List<LevelController>();
 
-    private void Start()
+    private LevelController currentLevel;
+
+    public LevelController CurrentLevel => currentLevel;
+
+    public void GenerateDungeon()
     {
-        if (generateOnStart)
-            GenerateCurrentDungeon();
-    }
+        if (difficultyConfig == null || levelPrefabs.Count == 0)
+        {
+            Debug.LogWarning("[DungeonRunManager] Missing difficulty config or level prefabs.");
+            return;
+        }
 
-    public void GenerateCurrentDungeon()
-    {
-        if (useFixedSeed) Random.InitState(fixedSeed + dungeonIndex);
-        else Random.InitState(System.Environment.TickCount + dungeonIndex);
+        if (currentLevel != null)
+        {
+            Destroy(currentLevel.gameObject);
+            currentLevel = null;
+        }
 
-        RoomGenerator.Instance.Generate(dungeonIndex, maxDungeon);
+        DungeonDifficultyConfig.DungeonRule rule = difficultyConfig.GetRule(dungeonIndex);
+
+        //Improve this logic later, for now just a rondomizer
+        int selectLevel = Random.Range(0, levelPrefabs.Count);
+
+        currentLevel = Instantiate(levelPrefabs[selectLevel], transform);
+        currentLevel.Initialize(rule);
     }
 
     public void GoToNextDungeon()
     {
         dungeonIndex = Mathf.Min(dungeonIndex + 1, maxDungeon);
-        GenerateCurrentDungeon();
+        GenerateDungeon();
+    }
+
+    public bool TryGetCurrentPlayerSpawnPosition(out Vector2 spawnPosition)
+    {
+        spawnPosition = default;
+
+        if (currentLevel == null)
+            return false;
+
+        return currentLevel.TryGetPlayerSpawnPoint(out spawnPosition);
     }
 }
 

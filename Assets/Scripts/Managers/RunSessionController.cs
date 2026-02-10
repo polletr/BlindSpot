@@ -6,7 +6,6 @@ public class RunSessionController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private DungeonRunManager runManager;
-    [SerializeField] private RoomGenerator roomGenerator;
     [SerializeField] private PlayerController playerPrefab;
     [SerializeField] private Transform playerContainer;
 
@@ -34,17 +33,23 @@ public class RunSessionController : MonoBehaviour
         if (runManager == null)
             runManager = DungeonRunManager.Instance;
 
-        if (roomGenerator == null)
-            roomGenerator = RoomGenerator.Instance;
+        if (crosshairCamera == null)
+            crosshairCamera = Camera.main;
+
+        if ((sonarConePool == null || sonarImpactPool == null) && SonarPoolHub.TryGet(out var cone, out var impact))
+        {
+            if (sonarConePool == null)
+                sonarConePool = cone;
+            if (sonarImpactPool == null)
+                sonarImpactPool = impact;
+        }
+
     }
 
     private void OnEnable()
     {
         if (GameFlowManager.HasInstance)
             GameFlowManager.Instance.RegisterRunSession(this);
-
-        if (roomGenerator != null)
-            roomGenerator.GenerationCompleted += HandleGenerationCompleted;
 
         if (generateOnStart && Application.isPlaying)
             BeginNewRun();
@@ -55,8 +60,6 @@ public class RunSessionController : MonoBehaviour
         if (GameFlowManager.HasInstance)
             GameFlowManager.Instance.UnregisterRunSession(this);
 
-        if (roomGenerator != null)
-            roomGenerator.GenerationCompleted -= HandleGenerationCompleted;
     }
 
     public void BeginNewRun()
@@ -64,7 +67,7 @@ public class RunSessionController : MonoBehaviour
         if (_generationInProgress)
             return;
 
-        if (runManager == null || roomGenerator == null)
+        if (runManager == null)
         {
             Debug.LogWarning("[RunSessionController] Missing references; cannot start run generation.");
             return;
@@ -72,7 +75,17 @@ public class RunSessionController : MonoBehaviour
 
         _generationInProgress = true;
         DisablePlayerInput();
-        runManager.GenerateCurrentDungeon();
+        runManager.GenerateDungeon();
+
+        if (runManager.TryGetCurrentPlayerSpawnPosition(out Vector2 spawnPosition))
+        {
+            SpawnOrMovePlayer(spawnPosition);
+            EnablePlayerInput();
+        }
+        else
+        {
+            Debug.LogWarning("[RunSessionController] Level generated without a player spawn point.");
+        }
 
         if (_generationInProgress)
             _generationInProgress = false;
@@ -92,6 +105,16 @@ public class RunSessionController : MonoBehaviour
         _generationInProgress = true;
         DisablePlayerInput();
         runManager.GoToNextDungeon();
+
+        if (runManager.TryGetCurrentPlayerSpawnPosition(out Vector2 spawnPosition))
+        {
+            SpawnOrMovePlayer(spawnPosition);
+            EnablePlayerInput();
+        }
+        else
+        {
+            Debug.LogWarning("[RunSessionController] Next dungeon generated without a player spawn point.");
+        }
 
         if (_generationInProgress)
             _generationInProgress = false;
@@ -186,19 +209,39 @@ public class RunSessionController : MonoBehaviour
         var cursor = player.GetComponent<VirtualAimCursor>();
         if (cursor != null)
         {
+            cursor.SetAimOrigin(player.transform);
+
             if (crosshairUI != null)
                 cursor.SetCrosshair(crosshairUI);
+            else
+                Debug.LogWarning("[RunSessionController] crosshairUI is not assigned; mouse cursor UI will not render.");
+
             if (crosshairCamera != null)
                 cursor.SetCamera(crosshairCamera);
+            else
+                Debug.LogWarning("[RunSessionController] crosshairCamera is not assigned; aim projection may be incorrect.");
         }
 
         var sonar = player.GetComponent<SonarPing>();
         if (sonar != null)
         {
+            if ((sonarConePool == null || sonarImpactPool == null) && SonarPoolHub.TryGet(out var cone, out var impact))
+            {
+                if (sonarConePool == null)
+                    sonarConePool = cone;
+                if (sonarImpactPool == null)
+                    sonarImpactPool = impact;
+            }
+
             if (sonarConePool != null)
                 sonar.conePool = sonarConePool;
+            else
+                Debug.LogWarning("[RunSessionController] sonarConePool is not assigned; flashlight cone visual cannot be created.");
+
             if (sonarImpactPool != null)
                 sonar.impactPool = sonarImpactPool;
+            else
+                Debug.LogWarning("[RunSessionController] sonarImpactPool is not assigned; wall impact visuals cannot be created.");
         }
     }
 

@@ -182,8 +182,7 @@ public class SquareEnemy : EnemyBase
         float maxExtent = Mathf.Max(minExtent, patrolMaxHalfExtent);
 
         Vector2 center = transform.position;
-        RoomGenerator generator = RoomGenerator.Instance;
-        Bounds bounds = generator != null ? generator.RoomBounds : new Bounds(new Vector3(center.x, center.y, 0f), new Vector3(maxExtent * 4f, maxExtent * 4f, 4f));
+        Bounds bounds = new Bounds(new Vector3(center.x, center.y, 0f), new Vector3(maxExtent * 4f, maxExtent * 4f, 4f));
         bool hasBounds = bounds.size.sqrMagnitude > 0.0001f;
 
         Vector2[] tempPoints = new Vector2[_patrolPoints.Length];

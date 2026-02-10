@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2358140938212221591
+--- !u!1 &8696133117324141343
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,45 +8,40 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6055519282535533850}
-  - component: {fileID: 6358408841556818989}
+  - component: {fileID: 4888541978101854698}
+  - component: {fileID: 3476357786812537310}
   m_Layer: 0
-  m_Name: DungeonRunManager
+  m_Name: PlayerSpawn
   m_TagString: Untagged
-  m_Icon: {fileID: 0}
+  m_Icon: {fileID: -5487077368411116049, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6055519282535533850
+--- !u!4 &4888541978101854698
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2358140938212221591}
+  m_GameObject: {fileID: 8696133117324141343}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -13.59, y: -21.28, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6358408841556818989
+--- !u!114 &3476357786812537310
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2358140938212221591}
+  m_GameObject: {fileID: 8696133117324141343}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 258e43524ba711e46acab336ae5a3de4, type: 3}
+  m_Script: {fileID: 11500000, guid: 01b82106c9c8b56478c773cd7732357c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DungeonRunManager
-  <IsPersistent>k__BackingField: 0
-  dungeonIndex: 1
-  maxDungeon: 10
-  difficultyConfig: {fileID: 11400000, guid: 8b0060debd69e56478feffc8769c8b47, type: 2}
-  levelPrefabs:
-  - {fileID: 8665078470186142203, guid: 82c27030879fca4408fac65e90a186c3, type: 3}
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerSpawner
+  objInstance: {fileID: 0}

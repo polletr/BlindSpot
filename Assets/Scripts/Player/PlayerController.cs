@@ -181,6 +181,14 @@ public class PlayerController : MonoBehaviour
         ChangeState(DashState);
     }
 
+    public void OnLook(InputAction.CallbackContext ctx)
+    {
+        if (aimCursor == null)
+            aimCursor = GetComponent<VirtualAimCursor>();
+
+        aimCursor?.OnLook(ctx);
+    }
+
     public void OnPing(InputAction.CallbackContext ctx)
     {
         // Manual sonar pulses have been retired; handler kept to consume the input action.

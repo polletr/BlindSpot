@@ -260,9 +260,9 @@ MonoBehaviour:
   acceleration: 20
   deceleration: 20
   dashSpeed: 12
-  dashDuration: 0.2
+  dashDuration: 0.4
   dashCooldown: 2
-  allowDashWithoutInput: 1
+  allowDashWithoutInput: 0
   visualRoot: {fileID: 1210538903317992952}
   stretchAmount: 2
   squashAmount: 1

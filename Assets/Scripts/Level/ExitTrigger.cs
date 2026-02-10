@@ -7,8 +7,6 @@ public class ExitTrigger : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log(other.gameObject.name);
-
         if (_used) return;
         if ((playerLayer.value & (1 << other.gameObject.layer)) == 0) return;
 
