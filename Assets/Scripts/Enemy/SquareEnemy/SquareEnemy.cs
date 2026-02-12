@@ -149,7 +149,7 @@ public class SquareEnemy : EnemyBase
         ChangeState(IdleState);
     }
 
-    protected override void OnDamaged()
+    protected override void AggroOnHit()
     {
         if (IsDead || IsPlayerDead) return;
         if (HasPlayer)

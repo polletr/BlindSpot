@@ -3,18 +3,36 @@ using UnityEngine.Serialization;
 
 public class Revealable : MonoBehaviour
 {
-    [Tooltip("Single sprite renderer used by reveal visuals.")]
+    [Tooltip("Main sprite of the object. Hidden by default, shown when inside player vision.")]
     [FormerlySerializedAs("renderers")]
-    [SerializeField] private SpriteRenderer spriteRenderer;
+    [FormerlySerializedAs("spriteRenderer")]
+    [SerializeField] private SpriteRenderer mainSpriteRenderer;
 
-    [Tooltip("Single particle system used by reveal visuals.")]
-    [SerializeField] private ParticleSystem particleSystem;
+    [Tooltip("Default reveal hint visual shown when hit by flashlight (outside player vision).")]
+    [FormerlySerializedAs("particleSystem")]
+    [SerializeField] private ParticleSystem revealParticleSystem;
 
-    [Tooltip("When false, reveal uses particles. When true, reveal uses sprite.")]
-    [SerializeField] private bool isVisionUpgradeOn;
+    [Tooltip("Optional alternate reveal hint visual shown instead of particles when upgrade visual is active.")]
+    [SerializeField] private SpriteRenderer revealUpgradeSpriteRenderer;
 
+    [Tooltip("When true, this script controls the main sprite visibility and alpha.")]
+    [SerializeField] private bool controlMainSpriteVisibility = true;
+
+    [Tooltip("If true, swap flashlight reveal from particles to upgrade sprite when upgrade flag is active.")]
+    [SerializeField] private bool useUpgradeDrivenRevealVisual = true;
+
+    [Tooltip("Manual fallback/test toggle for upgrade reveal visual.")]
+    [FormerlySerializedAs("isVisionUpgradeOn")]
+    [SerializeField] private bool forceUpgradeRevealVisual;
+
+    [Tooltip("Main sprite starts hidden until player vision overlaps.")]
     public bool hideOnStart = true;
+
+    [Tooltip("How fast flashlight reveal hint fades out when flashlight is no longer on target.")]
     public float fadeOutTime = 0.25f;
+
+    [Tooltip("Target alpha used for flashlight reveal hint visuals.")]
+    [Range(0f, 1f)] public float flashlightRevealAlpha = 1f;
 
     struct ParticleColorState
     {
@@ -23,119 +41,154 @@ public class Revealable : MonoBehaviour
     }
 
     ParticleColorState particleColorState;
+    private UpgradeManager upgradeManager;
     float visibleUntil;
-    float currentAlpha;
+    float currentRevealAlpha;
     bool insidePlayerVision;
+    bool upgradeRevealVisualActive;
 
     public bool CanBeRevealed => !insidePlayerVision;
 
     void Awake()
     {
-        if (!spriteRenderer)
-            spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
-        if (!particleSystem)
-            particleSystem = GetComponentInChildren<ParticleSystem>(true);
+        if (!mainSpriteRenderer)
+            mainSpriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
+        if (!revealParticleSystem)
+            revealParticleSystem = GetComponentInChildren<ParticleSystem>(true);
 
         CacheParticleColorState();
-        ApplyVisualMode();
+        currentRevealAlpha = hideOnStart ? 0f : ResolveInitialAlpha();
 
-        if (hideOnStart) SetAlpha(0f);
-        else currentAlpha = ResolveInitialAlpha();
+        if (controlMainSpriteVisibility)
+            SetMainSpriteAlpha(hideOnStart ? 0f : 1f);
+
+        ApplyRevealVisuals();
+    }
+
+    void OnEnable()
+    {
+        TryHookUpgradeManager();
+        RefreshUpgradeDrivenState(forceRefresh: true);
     }
 
     public void SetVisionUpgradeState(bool enabled)
     {
-        isVisionUpgradeOn = enabled;
-        ApplyVisualMode();
-        SetAlpha(currentAlpha);
+        forceUpgradeRevealVisual = enabled;
+        RefreshUpgradeDrivenState(forceRefresh: true);
     }
 
     public void Reveal(float duration)
     {
         if (insidePlayerVision) return;
         visibleUntil = Mathf.Max(visibleUntil, Time.time + duration);
-        SetAlpha(0.05f);
+        currentRevealAlpha = Mathf.Max(currentRevealAlpha, flashlightRevealAlpha);
+        ApplyRevealVisuals();
     }
 
     void Update()
     {
         UpdateParticleRendererWhenIdle();
 
-        if (insidePlayerVision) return;
-        if (Time.time <= visibleUntil) return;
+        if (insidePlayerVision)
+        {
+            ApplyRevealVisuals();
+            return;
+        }
 
-        currentAlpha = Mathf.MoveTowards(currentAlpha, 0f, Time.deltaTime / Mathf.Max(0.01f, fadeOutTime));
-        SetAlpha(currentAlpha);
+        if (Time.time > visibleUntil)
+        {
+            currentRevealAlpha = Mathf.MoveTowards(
+                currentRevealAlpha,
+                0f,
+                Time.deltaTime / Mathf.Max(0.01f, fadeOutTime));
+        }
+
+        ApplyRevealVisuals();
     }
 
-    void ApplyVisualMode()
+    void TryHookUpgradeManager()
     {
-        if (spriteRenderer)
-            spriteRenderer.enabled = isVisionUpgradeOn;
+        if (upgradeManager != null)
+            return;
 
-        if (!particleSystem) return;
-
-        var particleRenderer = particleSystem.GetComponent<ParticleSystemRenderer>();
-        if (particleRenderer)
-            particleRenderer.enabled = !isVisionUpgradeOn;
-
-        if (isVisionUpgradeOn)
-        {
-            if (particleSystem.isPlaying)
-                particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-        }
-        else if (currentAlpha > 0.0001f)
-        {
-            if (!particleSystem.isPlaying) particleSystem.Play(true);
-        }
+        upgradeManager = UpgradeManager.Instance;
+        if (upgradeManager != null)
+            upgradeManager.UpgradesChanged += HandleUpgradesChanged;
     }
 
-    void SetAlpha(float a)
+    void HandleUpgradesChanged(UpgradeSnapshot snapshot)
     {
-        currentAlpha = a;
+        RefreshUpgradeDrivenState(forceRefresh: true);
+    }
 
-        if (spriteRenderer)
+    void RefreshUpgradeDrivenState(bool forceRefresh = false)
+    {
+        bool shouldUseUpgradeVisual = forceUpgradeRevealVisual;
+        if (useUpgradeDrivenRevealVisual && upgradeManager != null && upgradeManager.RevealableAltVisualEnabled)
+            shouldUseUpgradeVisual = true;
+
+        if (!forceRefresh && shouldUseUpgradeVisual == upgradeRevealVisualActive)
+            return;
+
+        upgradeRevealVisualActive = shouldUseUpgradeVisual;
+        ApplyRevealVisuals();
+    }
+
+    void ApplyRevealVisuals()
+    {
+        if (insidePlayerVision)
         {
-            var c = spriteRenderer.color;
-            c.a = a;
-            spriteRenderer.color = c;
+            if (controlMainSpriteVisibility)
+                SetMainSpriteAlpha(1f);
+
+            SetUpgradeSpriteAlpha(0f, false);
+            ApplyParticleAlpha(particleColorState, 0f);
+            return;
         }
 
-        if (isVisionUpgradeOn)
+        if (controlMainSpriteVisibility)
+            SetMainSpriteAlpha(0f);
+
+        bool showHint = currentRevealAlpha > 0.0001f;
+        bool useUpgradeSprite = showHint && upgradeRevealVisualActive && revealUpgradeSpriteRenderer != null;
+
+        if (useUpgradeSprite)
         {
+            SetUpgradeSpriteAlpha(currentRevealAlpha, true);
             ApplyParticleAlpha(particleColorState, 0f);
         }
         else
         {
-            ApplyParticleAlpha(particleColorState, a);
+            SetUpgradeSpriteAlpha(0f, false);
+            ApplyParticleAlpha(particleColorState, showHint ? currentRevealAlpha : 0f);
         }
     }
 
     void CacheParticleColorState()
     {
-        if (!particleSystem)
+        if (!revealParticleSystem)
         {
             particleColorState = default;
             return;
         }
 
-        var main = particleSystem.main;
+        var main = revealParticleSystem.main;
         particleColorState = new ParticleColorState
         {
-            particleSystem = particleSystem,
+            particleSystem = revealParticleSystem,
             initialStartColor = main.startColor
         };
     }
 
     float ResolveInitialAlpha()
     {
-        if (spriteRenderer)
-            return spriteRenderer.color.a;
+        if (revealUpgradeSpriteRenderer)
+            return revealUpgradeSpriteRenderer.color.a;
 
         if (particleColorState.particleSystem)
             return ExtractAlpha(particleColorState.initialStartColor);
 
-        return 0.05f;
+        return Mathf.Clamp01(flashlightRevealAlpha);
     }
 
     static float ExtractAlpha(ParticleSystem.MinMaxGradient gradient)
@@ -195,14 +248,14 @@ public class Revealable : MonoBehaviour
 
     void UpdateParticleRendererWhenIdle()
     {
-        if (!particleSystem) return;
+        if (!revealParticleSystem) return;
 
-        if (currentAlpha > 0.0001f && !isVisionUpgradeOn) return;
+        if (currentRevealAlpha > 0.0001f && !upgradeRevealVisualActive && !insidePlayerVision) return;
 
-        var particleRenderer = particleSystem.GetComponent<ParticleSystemRenderer>();
+        var particleRenderer = revealParticleSystem.GetComponent<ParticleSystemRenderer>();
         if (!particleRenderer) return;
 
-        if (!particleSystem.IsAlive(true))
+        if (!revealParticleSystem.IsAlive(true))
             particleRenderer.enabled = false;
     }
 
@@ -262,6 +315,12 @@ public class Revealable : MonoBehaviour
 
     void OnDisable()
     {
+        if (upgradeManager != null)
+        {
+            upgradeManager.UpgradesChanged -= HandleUpgradesChanged;
+            upgradeManager = null;
+        }
+
         if (PlayerVisionField.Instance != null)
             PlayerVisionField.Instance.ForceExit(this);
     }
@@ -275,7 +334,28 @@ public class Revealable : MonoBehaviour
         if (insidePlayerVision)
         {
             visibleUntil = 0f;
-            SetAlpha(0f);
+            currentRevealAlpha = 0f;
         }
+
+        ApplyRevealVisuals();
+    }
+
+    void SetMainSpriteAlpha(float alpha)
+    {
+        if (!mainSpriteRenderer) return;
+
+        var color = mainSpriteRenderer.color;
+        color.a = alpha;
+        mainSpriteRenderer.color = color;
+    }
+
+    void SetUpgradeSpriteAlpha(float alpha, bool enabled)
+    {
+        if (!revealUpgradeSpriteRenderer) return;
+
+        revealUpgradeSpriteRenderer.enabled = enabled;
+        var color = revealUpgradeSpriteRenderer.color;
+        color.a = alpha;
+        revealUpgradeSpriteRenderer.color = color;
     }
 }

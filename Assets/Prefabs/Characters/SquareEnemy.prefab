@@ -447,11 +447,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f08c466f0a7eace4faed307b12d395e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Revealable
-  spriteRenderer: {fileID: 1813582364098909088}
-  particleSystem: {fileID: 4194525213190284642}
-  isVisionUpgradeOn: 0
+  mainSpriteRenderer: {fileID: 6416200684998699801}
+  revealParticleSystem: {fileID: 4194525213190284642}
+  revealUpgradeSpriteRenderer: {fileID: 1813582364098909088}
+  controlMainSpriteVisibility: 1
+  useUpgradeDrivenRevealVisual: 1
+  forceUpgradeRevealVisual: 0
   hideOnStart: 1
-  fadeOutTime: 0.5
+  fadeOutTime: 0.1
+  flashlightRevealAlpha: 0.5
 --- !u!114 &8839218462488382193
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -506,7 +510,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquareEnemy
   player: {fileID: 0}
-  moveSpeed: 1.5
+  moveSpeed: 1.8
   acceleration: 25
   chaseSpeedMultiplier: 1.35
   alertTime: 0.15
@@ -515,18 +519,21 @@ MonoBehaviour:
   stopDistance: 0.65
   navMeshRepathInterval: 0.25
   navMeshRepathDistance: 0.4
+  gridCellSize: 0.7
   navMeshCornerTolerance: 0.1
-  navMeshSampleDistance: 0.6
-  navMeshSampleFallbackMultiplier: 3
-  navMeshAreaMask: -1
+  fallbackBoundsSize: 40
+  pathBlockMask:
+    serializedVersion: 2
+    m_Bits: 3072
   tips: []
   tipSwitchCooldown: 0.25
   tipSwitchBetterBy: 0.25
   rotateSpeed: 720
-  detectRadius: 2
-  loseRadius: 4
+  detectRadius: 3
+  loseRadius: 5
   drawGizmos: 1
   maxHealth: 5
+  hitRevealDuration: 0.9
   deathCleanupDelay: 3
   deathAnimatorOverride: {fileID: 0}
   deathTriggerName: Die

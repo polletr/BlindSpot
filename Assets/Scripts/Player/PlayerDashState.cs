@@ -2,12 +2,14 @@ using UnityEngine;
 
 public sealed class PlayerDashState : PlayerStateBase
 {
+    private const float PostDashSlowdownMultiplier = 3f;
     private float timeRemaining;
     private Vector2 dashDir;
 
     public override void Enter(PlayerController p)
     {
-        timeRemaining = p.DashDuration;
+        float dashVisualDuration = p.stretchTime + p.settleTime;
+        timeRemaining = (dashVisualDuration > 0.001f) ? dashVisualDuration : p.DashDuration;
 
         dashDir = p.GetCommittedDashDirection();
         if (dashDir.sqrMagnitude < 0.0001f)
@@ -39,7 +41,15 @@ public sealed class PlayerDashState : PlayerStateBase
 
     public override void Exit(PlayerController p)
     {
-        // Preserve momentum into move state
-        p.CurrentVelocity = p.RB.linearVelocity;
+        // Keep a touch of momentum, then let move state quickly settle to normal speed.
+        Vector2 postDashVelocity = p.MoveInput * p.MovementSpeed;
+        Vector2 carryVelocity = Vector2.MoveTowards(
+            p.RB.linearVelocity,
+            postDashVelocity,
+            p.deceleration * PostDashSlowdownMultiplier * Time.fixedDeltaTime
+        );
+
+        p.CurrentVelocity = carryVelocity;
+        p.RB.linearVelocity = carryVelocity;
     }
 }

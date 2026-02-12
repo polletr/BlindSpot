@@ -16,5 +16,6 @@ public class PermaUpgrade : ScriptableObject
     public float roundLightIntensityPermMultiplier = 1f;
     public float dashCooldownPermMultiplier = 1f;
     public bool radarAlwaysOnPerm = false;
+    public bool revealableAltVisualPerm = false;
 
 }

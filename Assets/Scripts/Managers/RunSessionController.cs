@@ -159,8 +159,8 @@ public class RunSessionController : MonoBehaviour
 
         _activePlayer.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
 
-        _activePlayer.Respawn(spawnPosition);
         ConfigurePlayerRuntimeReferences(_activePlayer);
+        _activePlayer.Respawn(spawnPosition);
         PlayerSpawned?.Invoke(_activePlayer);
     }
 
@@ -242,6 +242,9 @@ public class RunSessionController : MonoBehaviour
                 sonar.impactPool = sonarImpactPool;
             else
                 Debug.LogWarning("[RunSessionController] sonarImpactPool is not assigned; wall impact visuals cannot be created.");
+
+            // Ensure the continuous cone visual is (re)initialized after runtime pool wiring.
+            sonar.ForceFlashlightState(sonar.flashlightEnabled);
         }
     }
 

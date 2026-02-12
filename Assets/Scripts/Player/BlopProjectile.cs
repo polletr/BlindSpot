@@ -23,6 +23,8 @@ public class BlopProjectile : MonoBehaviour
     private Rigidbody2D _rb;
     private float _lifeTimer;
     private Tween _squishTween;
+    private Vector2 _launchOrigin;
+    private float _maxDistanceFromOrigin = -1f;
 
     private void Awake()
     {
@@ -47,6 +49,13 @@ public class BlopProjectile : MonoBehaviour
         _lifeTimer -= Time.deltaTime;
         if (_lifeTimer <= 0f)
             Destroy(gameObject);
+
+        if (_maxDistanceFromOrigin > 0f)
+        {
+            float sqr = ((Vector2)transform.position - _launchOrigin).sqrMagnitude;
+            if (sqr >= _maxDistanceFromOrigin * _maxDistanceFromOrigin)
+                Destroy(gameObject);
+        }
     }
 
     public void Launch(Vector2 direction, float overrideSpeed = -1f)
@@ -58,8 +67,14 @@ public class BlopProjectile : MonoBehaviour
         float finalSpeed = overrideSpeed > 0f ? overrideSpeed : speed;
 
         _rb.linearVelocity = dir * finalSpeed;
+        _launchOrigin = transform.position;
         transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
         PlaySquish(dir);
+    }
+
+    public void SetMaxTravelDistance(float maxDistance)
+    {
+        _maxDistanceFromOrigin = maxDistance > 0f ? maxDistance : -1f;
     }
 
     private void PlaySquish(Vector2 dir)

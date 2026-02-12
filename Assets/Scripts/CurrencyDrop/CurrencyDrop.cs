@@ -163,9 +163,6 @@ public class CurrencyDrop : MonoBehaviour
         _magnetStartTime = Time.time;
         _vel = Vector3.zero;
 
-        if (magnetTriggerCollider != null) magnetTriggerCollider.enabled = false;
-        if (collectTriggerCollider != null) collectTriggerCollider.enabled = false;
-
         _magnetCoroutine = StartCoroutine(MagnetRoutine());
     }
 

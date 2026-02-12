@@ -73,6 +73,23 @@ public class BlopShooter : MonoBehaviour
 
         Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
         var projectile = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+        float maxDistance = ResolveProjectileVisionRange();
+        projectile.SetMaxTravelDistance(maxDistance);
         projectile.Launch(direction, projectileSpeed);
+    }
+
+    private float ResolveProjectileVisionRange()
+    {
+        if (player == null)
+            return 0f;
+
+        var visionField = player.GetComponentInChildren<PlayerVisionField>();
+        if (visionField == null)
+            visionField = PlayerVisionField.Instance;
+
+        if (visionField == null)
+            return 0f;
+
+        return visionField.CurrentOuterRadius;
     }
 }

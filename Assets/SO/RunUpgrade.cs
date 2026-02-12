@@ -21,5 +21,7 @@ public class RunUpgrade : ScriptableObject
     public float enemyAmountTempMultiplier = 1f;
     public float blopsAmountTempMultiplier = 1f;
 
-    public bool radarAlwaysOnTemp = false;
+    public bool radarAlwaysOnTemp = false;
+    public bool revealableAltVisualTemp = false;
 }
+

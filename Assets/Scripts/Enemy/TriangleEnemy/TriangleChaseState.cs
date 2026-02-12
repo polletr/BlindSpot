@@ -8,8 +8,15 @@ public sealed class TriangleChaseState : EnemyStateBase
     {
         _chaseTimer = 0f;
         var t = (TriangleEnemy)e;
+        t.SetChaseRevealForced(true, instant: true);
         t.ResetChaseSteering();
         t.InvalidateNavPath();
+    }
+
+    public override void Exit(EnemyBase e)
+    {
+        var t = (TriangleEnemy)e;
+        t.SetChaseRevealForced(false, instant: false);
     }
 
     public override void Tick(EnemyBase e)

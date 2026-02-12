@@ -4,9 +4,16 @@ public sealed class SquareChaseState : EnemyStateBase
     public override void Enter(EnemyBase e)
     {
         var square = (SquareEnemy)e;
+        square.SetChaseRevealForced(true, instant: true);
         square.ResetChaseSteering();
         square.ClearMoveIntent();
         square.InvalidateNavPath();
+    }
+
+    public override void Exit(EnemyBase e)
+    {
+        var square = (SquareEnemy)e;
+        square.SetChaseRevealForced(false, instant: false);
     }
 
     public override void Tick(EnemyBase e)

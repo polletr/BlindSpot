@@ -42,6 +42,7 @@ public class UpgradeManager : Singleton<UpgradeManager>
     public float EnemyAmountMultiplier => _snapshot.enemyAmountMultiplier;
     public float BlopsAmountMultiplier => _snapshot.blopsAmountMultiplier;
     public bool RadarAlwaysOn => _snapshot.radarAlwaysOn;
+    public bool RevealableAltVisualEnabled => _snapshot.revealableAltVisualEnabled;
 
 
 
@@ -157,6 +158,7 @@ public struct UpgradeSnapshot
     public float enemyAmountMultiplier;
     public float blopsAmountMultiplier;
     public bool radarAlwaysOn;
+    public bool revealableAltVisualEnabled;
 
 
     public static UpgradeSnapshot Identity => new UpgradeSnapshot()
@@ -176,6 +178,7 @@ public struct UpgradeSnapshot
         enemyAmountMultiplier = 1f,
         blopsAmountMultiplier = 1f,
         radarAlwaysOn = false,
+        revealableAltVisualEnabled = false,
 
     };
 
@@ -199,6 +202,7 @@ public struct UpgradeSnapshot
         enemyAmountMultiplier *= upgrade.enemyAmountTempMultiplier;
         blopsAmountMultiplier *= upgrade.blopsAmountTempMultiplier;
         radarAlwaysOn |= upgrade.radarAlwaysOnTemp;
+        revealableAltVisualEnabled |= upgrade.revealableAltVisualTemp;
 
 
     }
@@ -219,6 +223,8 @@ public struct UpgradeSnapshot
         dashCooldownMultiplier *= upgrade.dashCooldownPermMultiplier;
         if (upgrade.radarAlwaysOnPerm)
             radarAlwaysOn = true;
+        if (upgrade.revealableAltVisualPerm)
+            revealableAltVisualEnabled = true;
     }
 }
 

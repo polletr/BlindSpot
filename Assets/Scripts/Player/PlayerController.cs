@@ -177,6 +177,9 @@ public class PlayerController : MonoBehaviour
         if (IsDead || IsDashing) return;
         if (_dashCooldownRemaining > 0f) return;
 
+        Vector2 dashDir = GetCommittedDashDirection();
+        if (dashDir.sqrMagnitude < 0.001f) return;
+
         _dashCooldownRemaining = DashCooldown;
         ChangeState(DashState);
     }
@@ -262,7 +265,12 @@ public class PlayerController : MonoBehaviour
 
     public Vector2 GetCommittedDashDirection()
     {
-        Vector2 dir = (MoveInput.sqrMagnitude > 0.001f) ? MoveInput : _lastMoveDir;
+        Vector2 dir;
+
+        if (allowDashWithoutInput)
+            dir = (MoveInput.sqrMagnitude > 0.001f) ? MoveInput : _lastMoveDir;
+        else
+            dir = MoveInput;
 
         if (dir.sqrMagnitude < 0.001f && !allowDashWithoutInput)
             return Vector2.zero;

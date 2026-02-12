@@ -121,6 +121,7 @@ public class SonarPing : MonoBehaviour
     PlayerVisionField VisionField => PlayerVisionField.Instance;
     const string EnemyLayerName = "Enemies";
     const string RevealableLayerName = "Revealables";
+    const string BlopsLayerName = "Blops";
 
     void OnEnable()
     {
@@ -206,6 +207,10 @@ public class SonarPing : MonoBehaviour
         int revealableLayer = LayerMask.NameToLayer(RevealableLayerName);
         if (revealableLayer >= 0)
             revealableMask |= (1 << revealableLayer);
+
+        int blopsLayer = LayerMask.NameToLayer(BlopsLayerName);
+        if (blopsLayer >= 0)
+            revealableMask |= (1 << blopsLayer);
     }
 
     // ----------------------------------------------------

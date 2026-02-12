@@ -1,13 +1,14 @@
-using System;
+Ôªøusing System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
-using UnityEngine.AI;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public abstract class EnemyBase : MonoBehaviour
 {
+    const string WallsLayerName = "Walls";
+    const string ObstaclesLayerName = "Obstacles";
+
     [Header("Refs")]
     [SerializeField] protected Transform player; // assign or auto-find
     public Rigidbody2D RB { get; private set; }
@@ -43,11 +44,11 @@ public abstract class EnemyBase : MonoBehaviour
  
     [Header("Navigation")]
     [SerializeField, Min(0.05f)] float navMeshRepathInterval = 0.25f;
-    [SerializeField, Min(0.01f)] float navMeshRepathDistance = 0.4f;
+    [SerializeField, Min(0.05f)] float navMeshRepathDistance = 0.4f;
+    [SerializeField, Min(0.1f)] float gridCellSize = 0.5f;
     [SerializeField, Min(0.01f)] float navMeshCornerTolerance = 0.1f;
-    [SerializeField, Min(0.01f)] float navMeshSampleDistance = 0.6f;
-    [SerializeField, Min(1f)] float navMeshSampleFallbackMultiplier = 3f;
-    [SerializeField] int navMeshAreaMask = NavMesh.AllAreas;
+    [SerializeField, Min(0.5f)] float fallbackBoundsSize = 40f;
+    [SerializeField] LayerMask pathBlockMask;
  
 
 
@@ -78,6 +79,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     [Header("Combat")]
     [SerializeField, Min(1)] private int maxHealth = 3;
+    [SerializeField, Min(0f)] private float hitRevealDuration = 0.9f;
     [SerializeField, Tooltip("Delay before destroying corpses. Set negative to keep them around.")] private float deathCleanupDelay = 3f;
     [SerializeField] private Animator deathAnimatorOverride;
     [SerializeField] private string deathTriggerName = "Die";
@@ -94,7 +96,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     private Collider2D[] _cachedColliders;
     Coroutine _deathCleanupRoutine;
-    NavMeshPath _navMeshPath;
+    readonly List<Vector2> _gridPathPoints = new();
     Vector2 _navDestination;
     int _navCornerIndex;
     float _nextNavPathUpdateTime;
@@ -107,6 +109,8 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Awake()
     {
+        EnsurePathBlockMask();
+
         RB = GetComponent<Rigidbody2D>();
         RB.gravityScale = 0f;
         RB.freezeRotation = true;
@@ -139,6 +143,11 @@ public abstract class EnemyBase : MonoBehaviour
         IsDead = false;
         if (disableSpritesOnDeath)
             SetSpritesVisible(true);
+    }
+
+    void OnValidate()
+    {
+        EnsurePathBlockMask();
     }
 
     protected virtual void OnEnable()
@@ -234,7 +243,7 @@ public abstract class EnemyBase : MonoBehaviour
     public bool PlayerInDetectRadius() => HasPlayer && DistToPlayer <= CurrentDetectRadius;
     public bool PlayerBeyondLoseRadius() => !HasPlayer || DistToPlayer >= CurrentLoseRadius;
 
-    // Basic ìaccelerated velocityî steering (feels consistent with your player)
+    // Basic ‚Äúaccelerated velocity‚Äù steering (feels consistent with your player)
     public void MoveInDirection(Vector2 dir, float speedMultiplier = 1f)
     {
         if (IsDead) return;
@@ -259,6 +268,8 @@ public abstract class EnemyBase : MonoBehaviour
         amount = Mathf.Max(1, amount);
         CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
 
+        HandleRevealAndAggroOnHit();
+
         if (CurrentHealth <= 0)
             HandleDeath();
         else
@@ -267,6 +278,27 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void OnDamaged()
     {
+    }
+
+    protected virtual void AggroOnHit()
+    {
+    }
+
+    void HandleRevealAndAggroOnHit()
+    {
+        if (_enemyVisibility != null && !_enemyVisibility.IsVisible)
+            _enemyVisibility.ForceReveal(hitRevealDuration, instant: true);
+
+        if (!IsTargetPlayerDead)
+            AggroOnHit();
+    }
+
+    public void SetChaseRevealForced(bool forced, bool instant = true)
+    {
+        if (_enemyVisibility == null)
+            return;
+
+        _enemyVisibility.SetForcedVisiblePersistent(forced, instant);
     }
 
     protected virtual void HandleDeath()
@@ -522,23 +554,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (!needsRepath)
             return true;
-
-        if (_navMeshPath == null)
-            _navMeshPath = new NavMeshPath();
-
-        Vector3 from = transform.position;
-        Vector3 to = new Vector3(destination.x, destination.y, from.z);
-
-        if (!TrySampleNavPosition(from, out Vector3 sampledFrom) || !TrySampleNavPosition(to, out Vector3 sampledTo))
-        {
-            _navPathValid = false;
-            _hasNavDestination = false;
-            return false;
-        }
-
-        if (NavMesh.CalculatePath(sampledFrom, sampledTo, navMeshAreaMask, _navMeshPath)
-            && _navMeshPath.status == NavMeshPathStatus.PathComplete
-            && _navMeshPath.corners.Length > 0)
+        if (TryBuildGridPath((Vector2)transform.position, destination, _gridPathPoints))
         {
             _navPathValid = true;
             _hasNavDestination = true;
@@ -549,6 +565,7 @@ public abstract class EnemyBase : MonoBehaviour
         {
             _navPathValid = false;
             _hasNavDestination = false;
+            _gridPathPoints.Clear();
         }
 
         float interval = Mathf.Max(0.01f, navMeshRepathInterval);
@@ -559,49 +576,275 @@ public abstract class EnemyBase : MonoBehaviour
     bool TryGetCurrentCorner(Vector2 currentPosition, out Vector2 corner)
     {
         corner = Vector2.zero;
-        if (!_navPathValid || _navMeshPath == null || _navMeshPath.corners == null || _navMeshPath.corners.Length == 0)
+        if (!_navPathValid || _gridPathPoints.Count == 0)
             return false;
 
         float tolerance = Mathf.Max(0.005f, navMeshCornerTolerance);
-        while (_navCornerIndex < _navMeshPath.corners.Length)
+        while (_navCornerIndex < _gridPathPoints.Count)
         {
-            Vector3 rawCorner = _navMeshPath.corners[_navCornerIndex];
-            corner = new Vector2(rawCorner.x, rawCorner.y);
+            corner = _gridPathPoints[_navCornerIndex];
             float dist = Vector2.Distance(currentPosition, corner);
             if (dist <= tolerance)
             {
-                if (_navCornerIndex == _navMeshPath.corners.Length - 1)
+                if (_navCornerIndex == _gridPathPoints.Count - 1)
                     return false;
 
                 _navCornerIndex++;
                 continue;
             }
 
+            int lookAhead = _navCornerIndex;
+            for (int i = _navCornerIndex + 1; i < _gridPathPoints.Count; i++)
+            {
+                if (!HasPathLineOfSight(currentPosition, _gridPathPoints[i]))
+                    break;
+
+                lookAhead = i;
+            }
+
+            corner = _gridPathPoints[lookAhead];
+            _navCornerIndex = lookAhead;
             return true;
         }
 
         return false;
     }
 
-    bool TrySampleNavPosition(Vector3 origin, out Vector3 sampled)
+    bool HasPathLineOfSight(Vector2 from, Vector2 to)
     {
-        float maxDistance = Mathf.Max(0.01f, navMeshSampleDistance);
-        if (NavMesh.SamplePosition(origin, out NavMeshHit hit, maxDistance, navMeshAreaMask))
-        {
-            sampled = hit.position;
+        if (pathBlockMask.value == 0)
             return true;
+
+        RaycastHit2D hit = Physics2D.Linecast(from, to, pathBlockMask);
+        return hit.collider == null;
+    }
+
+    bool TryBuildGridPath(Vector2 startWorld, Vector2 goalWorld, List<Vector2> outPath)
+    {
+        outPath.Clear();
+
+        float cell = Mathf.Max(0.1f, gridCellSize);
+        float halfCell = cell * 0.5f;
+        float blockProbeRadius = Mathf.Max(0.05f, cell * 0.35f);
+
+        Bounds bounds = ResolvePathBounds(startWorld, goalWorld, cell);
+        Vector2 min = bounds.min;
+        Vector2 max = bounds.max;
+
+        int width = Mathf.Max(2, Mathf.CeilToInt((max.x - min.x) / cell));
+        int height = Mathf.Max(2, Mathf.CeilToInt((max.y - min.y) / cell));
+        int count = width * height;
+        if (count <= 0 || count > 262144)
+            return false;
+
+        bool[] blocked = new bool[count];
+        for (int y = 0; y < height; y++)
+        {
+            float wy = min.y + y * cell + halfCell;
+            for (int x = 0; x < width; x++)
+            {
+                float wx = min.x + x * cell + halfCell;
+                int idx = y * width + x;
+                blocked[idx] = pathBlockMask.value != 0
+                    && Physics2D.OverlapCircle(new Vector2(wx, wy), blockProbeRadius, pathBlockMask) != null;
+            }
         }
 
-        float fallbackDistance = Mathf.Max(maxDistance * navMeshSampleFallbackMultiplier, maxDistance);
-        if (fallbackDistance > maxDistance
-            && NavMesh.SamplePosition(origin, out hit, fallbackDistance, navMeshAreaMask))
+        int sx = Mathf.Clamp(Mathf.FloorToInt((startWorld.x - min.x) / cell), 0, width - 1);
+        int sy = Mathf.Clamp(Mathf.FloorToInt((startWorld.y - min.y) / cell), 0, height - 1);
+        int gx = Mathf.Clamp(Mathf.FloorToInt((goalWorld.x - min.x) / cell), 0, width - 1);
+        int gy = Mathf.Clamp(Mathf.FloorToInt((goalWorld.y - min.y) / cell), 0, height - 1);
+
+        if (!TryFindNearestWalkableCell(sx, sy, width, height, blocked, out sx, out sy))
+            return false;
+        if (!TryFindNearestWalkableCell(gx, gy, width, height, blocked, out gx, out gy))
+            return false;
+
+        int start = sy * width + sx;
+        int goal = gy * width + gx;
+        if (start == goal)
+            return false;
+
+        float[] gScore = new float[count];
+        float[] fScore = new float[count];
+        int[] cameFrom = new int[count];
+        bool[] closed = new bool[count];
+        for (int i = 0; i < count; i++)
         {
-            sampled = hit.position;
-            return true;
+            gScore[i] = float.PositiveInfinity;
+            fScore[i] = float.PositiveInfinity;
+            cameFrom[i] = -1;
         }
 
-        sampled = origin;
+        List<int> open = new List<int>(128);
+        gScore[start] = 0f;
+        fScore[start] = Heuristic(start, goal, width);
+        open.Add(start);
+
+        int[] dx = { -1, 0, 1, -1, 1, -1, 0, 1 };
+        int[] dy = { -1, -1, -1, 0, 0, 1, 1, 1 };
+
+        while (open.Count > 0)
+        {
+            int bestIdx = 0;
+            int current = open[0];
+            float bestF = fScore[current];
+            for (int i = 1; i < open.Count; i++)
+            {
+                int node = open[i];
+                float f = fScore[node];
+                if (f < bestF)
+                {
+                    bestF = f;
+                    bestIdx = i;
+                    current = node;
+                }
+            }
+
+            open.RemoveAt(bestIdx);
+            if (current == goal)
+            {
+                ReconstructPath(current, cameFrom, width, min, cell, halfCell, outPath);
+                return outPath.Count > 0;
+            }
+
+            closed[current] = true;
+            int cx = current % width;
+            int cy = current / width;
+
+            for (int dir = 0; dir < 8; dir++)
+            {
+                int nx = cx + dx[dir];
+                int ny = cy + dy[dir];
+                if (nx < 0 || nx >= width || ny < 0 || ny >= height)
+                    continue;
+
+                int neighbor = ny * width + nx;
+                if (closed[neighbor] || blocked[neighbor])
+                    continue;
+
+                if (dx[dir] != 0 && dy[dir] != 0)
+                {
+                    int sideA = cy * width + nx;
+                    int sideB = ny * width + cx;
+                    if (blocked[sideA] || blocked[sideB])
+                        continue;
+                }
+
+                float stepCost = (dx[dir] == 0 || dy[dir] == 0) ? 1f : 1.4142135f;
+                float tentativeG = gScore[current] + stepCost;
+                if (tentativeG >= gScore[neighbor])
+                    continue;
+
+                cameFrom[neighbor] = current;
+                gScore[neighbor] = tentativeG;
+                fScore[neighbor] = tentativeG + Heuristic(neighbor, goal, width);
+
+                if (!open.Contains(neighbor))
+                    open.Add(neighbor);
+            }
+        }
+
         return false;
+    }
+
+    static float Heuristic(int a, int b, int width)
+    {
+        int ax = a % width;
+        int ay = a / width;
+        int bx = b % width;
+        int by = b / width;
+        return Mathf.Abs(ax - bx) + Mathf.Abs(ay - by);
+    }
+
+    static void ReconstructPath(int goal, int[] cameFrom, int width, Vector2 min, float cell, float halfCell, List<Vector2> outPath)
+    {
+        outPath.Clear();
+        int current = goal;
+        while (current >= 0)
+        {
+            int x = current % width;
+            int y = current / width;
+            outPath.Add(new Vector2(min.x + x * cell + halfCell, min.y + y * cell + halfCell));
+            current = cameFrom[current];
+        }
+
+        outPath.Reverse();
+        if (outPath.Count > 1)
+            outPath.RemoveAt(0);
+    }
+
+    static bool TryFindNearestWalkableCell(int x, int y, int width, int height, bool[] blocked, out int outX, out int outY)
+    {
+        int center = y * width + x;
+        if (!blocked[center])
+        {
+            outX = x;
+            outY = y;
+            return true;
+        }
+
+        int maxRadius = Mathf.Max(width, height);
+        for (int r = 1; r <= maxRadius; r++)
+        {
+            int minX = Mathf.Max(0, x - r);
+            int maxX = Mathf.Min(width - 1, x + r);
+            int minY = Mathf.Max(0, y - r);
+            int maxY = Mathf.Min(height - 1, y + r);
+
+            for (int yy = minY; yy <= maxY; yy++)
+            {
+                for (int xx = minX; xx <= maxX; xx++)
+                {
+                    if (xx != minX && xx != maxX && yy != minY && yy != maxY)
+                        continue;
+
+                    int idx = yy * width + xx;
+                    if (!blocked[idx])
+                    {
+                        outX = xx;
+                        outY = yy;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        outX = x;
+        outY = y;
+        return false;
+    }
+
+    Bounds ResolvePathBounds(Vector2 start, Vector2 goal, float cell)
+    {
+        Bounds bounds;
+        if (RoomGenerator.HasInstance && RoomGenerator.Instance.RoomBounds.size.sqrMagnitude > 0.0001f)
+        {
+            bounds = RoomGenerator.Instance.RoomBounds;
+        }
+        else
+        {
+            float size = Mathf.Max(2f, fallbackBoundsSize);
+            bounds = new Bounds(transform.position, new Vector3(size, size, 0f));
+        }
+
+        bounds.Encapsulate(new Vector3(start.x, start.y, bounds.center.z));
+        bounds.Encapsulate(new Vector3(goal.x, goal.y, bounds.center.z));
+
+        float padding = Mathf.Max(cell * 2f, 0.5f);
+        bounds.Expand(new Vector3(padding, padding, 0f));
+        return bounds;
+    }
+
+    void EnsurePathBlockMask()
+    {
+        int wallsLayer = LayerMask.NameToLayer(WallsLayerName);
+        if (wallsLayer >= 0)
+            pathBlockMask |= (1 << wallsLayer);
+
+        int obstaclesLayer = LayerMask.NameToLayer(ObstaclesLayerName);
+        if (obstaclesLayer >= 0)
+            pathBlockMask |= (1 << obstaclesLayer);
     }
 
     // -----------------------------
@@ -663,6 +906,9 @@ public abstract class EnemyBase : MonoBehaviour
         MoveInDirection(ForwardDir, speedMultiplier);
     }
 }
+
+
+
 
 
 

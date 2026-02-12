@@ -48,12 +48,12 @@ MonoBehaviour:
   m_ComponentVersion: 2
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.5
+  m_FalloffIntensity: 0.2
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 0.8
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 000000004509d82583a1dd68a1de4d27c932586af731360315e06a8d
+  m_ApplyToSortingLayers: 000000004509d82583a1dd68a1de4d27f731360315e06a8d
   m_LightCookieSprite: {fileID: 21300000, guid: 119f93d0bcbf1e743bf5fcf237507d39, type: 3}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -73,8 +73,8 @@ MonoBehaviour:
     m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
-  m_PointLightInnerRadius: 2
-  m_PointLightOuterRadius: 3
+  m_PointLightInnerRadius: 2.5
+  m_PointLightOuterRadius: 3.5
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -101,7 +101,7 @@ MonoBehaviour:
   detectionMask:
     serializedVersion: 2
     m_Bits: 704
-  debugLogs: 0
+  debugLogs: 1
   debugGizmos: 1
   gizmoRadiusColor: {r: 1, g: 0.9, b: 0.1, a: 0.15}
   gizmoContactColor: {r: 0.1, g: 1, b: 0.6, a: 0.5}
@@ -138,7 +138,7 @@ Transform:
   m_GameObject: {fileID: 5767868427770200671}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 17.7, y: -0.20000002, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -261,7 +261,7 @@ MonoBehaviour:
   deceleration: 20
   dashSpeed: 12
   dashDuration: 0.4
-  dashCooldown: 2
+  dashCooldown: 3
   allowDashWithoutInput: 0
   visualRoot: {fileID: 1210538903317992952}
   stretchAmount: 2
@@ -283,7 +283,7 @@ MonoBehaviour:
   flashlightEnabled: 1
   flashlightUpdateInterval: 0
   flashlightDrawWallOutlines: 0
-  flashlightColor: {r: 0.06717693, g: 0.18845317, b: 0.3207547, a: 0}
+  flashlightColor: {r: 0.6622641, g: 0.8233381, b: 1, a: 1}
   aimSmoothTime: 0.2
   originSmoothTime: 0
   useRigidbodyOrigin: 1
@@ -296,7 +296,7 @@ MonoBehaviour:
     m_Bits: 3072
   revealableMask:
     serializedVersion: 2
-    m_Bits: 576
+    m_Bits: 704
   piercingUpgrade: 0
   rayCount: 100
   conePool: {fileID: 0}
