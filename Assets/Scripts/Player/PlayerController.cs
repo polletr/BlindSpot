@@ -13,6 +13,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement Tuning")]
     [SerializeField] private float moveSpeed = 6f;
+    [SerializeField, Range(0.1f, 1f)] private float aimingMoveSpeedMultiplier = 0.5f;
     public float acceleration = 30f;
     public float deceleration = 40f;
 
@@ -28,6 +29,11 @@ public class PlayerController : MonoBehaviour
     public float squashAmount = 0.75f;
     public float stretchTime = 0.06f;
     public float settleTime = 0.10f;
+
+    [Header("Aim Feel (Optional)")]
+    [SerializeField] private float aimShakeStrength = 0.06f;
+    [SerializeField] private int aimShakeVibrato = 20;
+    [SerializeField] private float aimShakeRandomness = 70f;
 
     // Public accessors used by states
     public Rigidbody2D RB { get; private set; }
@@ -56,8 +62,10 @@ public class PlayerController : MonoBehaviour
 
     // Tweens
     private Tween _dashFeelTween;
+    private Tween _aimShakeTween;
     private bool _movementInputLocked;
     private bool _flashlightEnabledBeforeKill = true;
+    private Vector3 _visualRootRestLocalPos = Vector3.zero;
 
     private UpgradeManager _upgradeManager;
     private UpgradeManager UpgradeMgr
@@ -74,7 +82,15 @@ public class PlayerController : MonoBehaviour
     private float DashDistanceMultiplier => UpgradeMgr != null ? UpgradeMgr.DashDistanceMultiplier : 1f;
     private float DashCooldownMultiplier => UpgradeMgr != null ? UpgradeMgr.DashCooldownMultiplier : 1f;
 
-    public float MovementSpeed => moveSpeed * VelocityMultiplier;
+    public bool IsAiming => blopShooter != null && blopShooter.IsCharging;
+    public float MovementSpeed
+    {
+        get
+        {
+            float aimingMultiplier = IsAiming ? Mathf.Clamp(aimingMoveSpeedMultiplier, 0.1f, 1f) : 1f;
+            return moveSpeed * VelocityMultiplier * aimingMultiplier;
+        }
+    }
     public float DashSpeed => dashSpeed * DashDistanceMultiplier;
     public float DashDuration => dashDuration;
     public float DashCooldown => dashCooldown * DashCooldownMultiplier;
@@ -112,6 +128,9 @@ public class PlayerController : MonoBehaviour
         if (blopShooter == null)
             blopShooter = GetComponent<BlopShooter>();
 
+        if (visualRoot != null)
+            _visualRootRestLocalPos = visualRoot.localPosition;
+
         if (sonar == null) sonar = GetComponent<SonarPing>();
         if (sonar != null)
         {
@@ -137,6 +156,12 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         _currentState?.FixedTick(this);
+    }
+
+    private void OnDisable()
+    {
+        StopAimShake();
+        KillDashFeel();
     }
 
     // ------------------------
@@ -175,6 +200,7 @@ public class PlayerController : MonoBehaviour
     {
         if (!ctx.performed) return;
         if (IsDead || IsDashing) return;
+        if (IsAiming) return;
         if (_dashCooldownRemaining > 0f) return;
 
         Vector2 dashDir = GetCommittedDashDirection();
@@ -199,9 +225,21 @@ public class PlayerController : MonoBehaviour
 
     public void OnShoot(InputAction.CallbackContext ctx)
     {
-        if (!ctx.performed) return;
         if (IsDead) return;
-        blopShooter?.TryShoot();
+        if (blopShooter == null) return;
+
+        if (ctx.started || (ctx.performed && !blopShooter.IsCharging))
+        {
+            blopShooter.BeginCharge();
+            RefreshAimShakeState();
+            return;
+        }
+
+        if (ctx.canceled)
+        {
+            blopShooter.ReleaseCharge();
+            RefreshAimShakeState();
+        }
     }
 
     // ------------------------
@@ -223,6 +261,8 @@ public class PlayerController : MonoBehaviour
         if (IsDead) return;
 
         SetMovementInputLocked(true);
+        StopAimShake();
+        blopShooter?.ReleaseCharge();
 
         if (sonar != null)
         {
@@ -251,6 +291,8 @@ public class PlayerController : MonoBehaviour
     {
         transform.position = position;
         SetMovementInputLocked(false);
+        StopAimShake();
+        blopShooter?.ReleaseCharge();
 
         if (sonar != null)
             sonar.ForceFlashlightState(_flashlightEnabledBeforeKill);
@@ -318,6 +360,40 @@ public class PlayerController : MonoBehaviour
 
         if (visualRoot != null)
             visualRoot.DOKill();
+    }
+
+    private void RefreshAimShakeState()
+    {
+        if (IsAiming)
+            StartAimShake();
+        else
+            StopAimShake();
+    }
+
+    private void StartAimShake()
+    {
+        if (visualRoot == null) return;
+        if (_aimShakeTween != null && _aimShakeTween.IsActive()) return;
+
+        _aimShakeTween = visualRoot.DOShakePosition(
+                duration: 0.3f,
+                strength: new Vector3(aimShakeStrength, aimShakeStrength, 0f),
+                vibrato: Mathf.Max(1, aimShakeVibrato),
+                randomness: aimShakeRandomness,
+                snapping: false,
+                fadeOut: false)
+            .SetLoops(-1, LoopType.Restart)
+            .SetEase(Ease.Linear);
+    }
+
+    private void StopAimShake()
+    {
+        if (_aimShakeTween != null && _aimShakeTween.IsActive())
+            _aimShakeTween.Kill();
+        _aimShakeTween = null;
+
+        if (visualRoot != null)
+            visualRoot.localPosition = _visualRootRestLocalPos;
     }
 
     // UI helper

@@ -143,6 +143,13 @@ public class SonarConeVisual : MonoBehaviour
         mesh.Clear();
     }
 
+    public void SetContinuousSettings(float range, float angleDeg)
+    {
+        _restRange = Mathf.Max(0f, range);
+        _currentRange = _restRange;
+        _angleDeg = angleDeg;
+    }
+
     public void SetRestColor(Color color, bool applyImmediately = true)
     {
         _restColorRGB = color;

@@ -11,8 +11,16 @@ public class BlopShooter : MonoBehaviour
     [Header("Fire Settings")]
     [SerializeField, Min(0f)] private float fireCooldown = 0.12f;
     [SerializeField] private float projectileSpeed = 16f;
+    [SerializeField, Min(0.01f)] private float aimReadyTime = 0.35f;
+    [SerializeField, Min(0f)] private float aimingFlashlightRange = 3.5f;
+    [SerializeField, Range(1f, 120f)] private float aimingFlashlightAngle = 18f;
+    [SerializeField] private Color aimReadyFlashlightColor = new Color(0.6f, 0.95f, 0.65f, 1f);
 
     private float _cooldownTimer;
+    private bool _isCharging;
+    private float _chargeTimer;
+    private SonarPing _sonar;
+    private bool _aimOverrideApplied;
 
     private void Awake()
     {
@@ -24,17 +32,55 @@ public class BlopShooter : MonoBehaviour
 
         if (firePoint == null)
             firePoint = transform;
+
+        if (player != null)
+            _sonar = player.GetComponent<SonarPing>();
     }
 
     private void Update()
     {
         if (_cooldownTimer > 0f)
             _cooldownTimer -= Time.deltaTime;
+
+        if (_isCharging)
+            _chargeTimer += Time.deltaTime;
+
+        UpdateAimVisuals();
     }
 
-    public bool TryShoot()
+    private void OnDisable()
     {
-        if (!CanShoot()) return false;
+        _isCharging = false;
+        _chargeTimer = 0f;
+        if (_sonar != null && _aimOverrideApplied)
+            _sonar.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
+        _aimOverrideApplied = false;
+    }
+
+    public bool IsCharging => _isCharging;
+    public bool IsAimReady => _isCharging && _chargeTimer >= aimReadyTime;
+    public float ChargeProgress01 => Mathf.Clamp01(_chargeTimer / Mathf.Max(0.01f, aimReadyTime));
+
+    public void BeginCharge()
+    {
+        if (_isCharging || !CanShoot()) return;
+
+        _isCharging = true;
+        _chargeTimer = 0f;
+        UpdateAimVisuals();
+    }
+
+    public bool ReleaseCharge()
+    {
+        if (!_isCharging) return false;
+        _isCharging = false;
+
+        bool canFire = CanShoot();
+        bool isReady = _chargeTimer >= aimReadyTime;
+        _chargeTimer = 0f;
+        UpdateAimVisuals();
+
+        if (!canFire || !isReady) return false;
         if (!wallet.TrySpend(1)) return false;
 
         Vector2 aimDir = GetAimDirection();
@@ -55,6 +101,34 @@ public class BlopShooter : MonoBehaviour
         return wallet.HasBlops;
     }
 
+    private void UpdateAimVisuals()
+    {
+        if (_sonar == null)
+        {
+            if (player == null) return;
+            _sonar = player.GetComponent<SonarPing>();
+            if (_sonar == null) return;
+        }
+
+        if (_isCharging)
+        {
+            if (!_aimOverrideApplied)
+            {
+                _sonar.SetAimModeOverride(true, aimingFlashlightRange, aimingFlashlightAngle);
+                _aimOverrideApplied = true;
+            }
+
+            _sonar.SetAimChargeVisual(ChargeProgress01, aimReadyFlashlightColor);
+            return;
+        }
+
+        if (_aimOverrideApplied)
+        {
+            _sonar.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
+            _aimOverrideApplied = false;
+        }
+    }
+
     private Vector2 GetAimDirection()
     {
         if (player == null)
@@ -73,7 +147,7 @@ public class BlopShooter : MonoBehaviour
 
         Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
         var projectile = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
-        float maxDistance = ResolveProjectileVisionRange();
+        float maxDistance = aimingFlashlightRange;
         projectile.SetMaxTravelDistance(maxDistance);
         projectile.Launch(direction, projectileSpeed);
     }

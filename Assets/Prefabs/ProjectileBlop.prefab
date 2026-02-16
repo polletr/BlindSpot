@@ -25,7 +25,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 901968684064325559}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: 0.025865925, w: 0.99966544}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -52,7 +52,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 0000000083a1dd68a1de4d274509d825c932586a
+  m_ApplyToSortingLayers: 0000000083a1dd68a1de4d274509d825c932586a15e06a8df7313603
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -72,8 +72,8 @@ MonoBehaviour:
     m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
-  m_PointLightInnerRadius: 0.01
-  m_PointLightOuterRadius: 0.02
+  m_PointLightInnerRadius: 0.12
+  m_PointLightOuterRadius: 0.18
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -223,7 +223,15 @@ MonoBehaviour:
   damage: 1
   damageLayers:
     serializedVersion: 2
-    m_Bits: 3136
+    m_Bits: 64
+  stickOnImpact: 1
+  stickLayers:
+    serializedVersion: 2
+    m_Bits: 3072
+  stickSurfaceOffset: 0.01
+  stickSquash: 0.7
+  stickStretch: 1.15
+  stickSquishTime: 0.06
   useSquish: 1
   stretchAmount: 1.2
   squashAmount: 0.85
@@ -264,4 +272,4 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.0625
+  m_Radius: 0.08

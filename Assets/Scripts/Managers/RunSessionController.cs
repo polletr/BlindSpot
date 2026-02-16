@@ -13,7 +13,6 @@ public class RunSessionController : MonoBehaviour
     [SerializeField] private RectTransform crosshairUI;
     [SerializeField] private Camera crosshairCamera;
     [SerializeField] private SonarConeVisualPool sonarConePool;
-    [SerializeField] private SonarImpactPool sonarImpactPool;
 
     [Header("Behaviour")]
     [SerializeField] private bool generateOnStart = false;
@@ -36,12 +35,10 @@ public class RunSessionController : MonoBehaviour
         if (crosshairCamera == null)
             crosshairCamera = Camera.main;
 
-        if ((sonarConePool == null || sonarImpactPool == null) && SonarPoolHub.TryGet(out var cone, out var impact))
+        if (sonarConePool == null && SonarPoolHub.TryGet(out var cone, out _))
         {
             if (sonarConePool == null)
                 sonarConePool = cone;
-            if (sonarImpactPool == null)
-                sonarImpactPool = impact;
         }
 
     }
@@ -225,23 +222,16 @@ public class RunSessionController : MonoBehaviour
         var sonar = player.GetComponent<SonarPing>();
         if (sonar != null)
         {
-            if ((sonarConePool == null || sonarImpactPool == null) && SonarPoolHub.TryGet(out var cone, out var impact))
+            if (sonarConePool == null && SonarPoolHub.TryGet(out var cone, out _))
             {
                 if (sonarConePool == null)
                     sonarConePool = cone;
-                if (sonarImpactPool == null)
-                    sonarImpactPool = impact;
             }
 
             if (sonarConePool != null)
                 sonar.conePool = sonarConePool;
             else
                 Debug.LogWarning("[RunSessionController] sonarConePool is not assigned; flashlight cone visual cannot be created.");
-
-            if (sonarImpactPool != null)
-                sonar.impactPool = sonarImpactPool;
-            else
-                Debug.LogWarning("[RunSessionController] sonarImpactPool is not assigned; wall impact visuals cannot be created.");
 
             // Ensure the continuous cone visual is (re)initialized after runtime pool wiring.
             sonar.ForceFlashlightState(sonar.flashlightEnabled);
