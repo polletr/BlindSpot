@@ -1,3 +1,4 @@
+using FMODUnity;
 using System;
 using UnityEngine;
 
@@ -6,6 +7,9 @@ public class BlopWallet : MonoBehaviour
     [Header("Balance")]
     [SerializeField, Min(0)] private int currentAmount;
     [SerializeField, Min(1)] private int capacity = 10;
+
+    [Header("AudioRefs")]
+    [SerializeField] private EventReference OnBlopCollected;
 
     public bool HasBlops => currentAmount > 0;
 
@@ -67,6 +71,7 @@ public class BlopWallet : MonoBehaviour
 
     private void NotifyChanged()
     {
+        AudioManager.Instance.PlayOneShot(OnBlopCollected, transform.position);
         GameFlowManager.Instance.HandleBlopsChanged(currentAmount, capacity);
     }
 }

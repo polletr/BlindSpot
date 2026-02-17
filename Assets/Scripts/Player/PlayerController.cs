@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using FMODUnity;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
@@ -10,6 +11,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private SonarPing sonar;
     [SerializeField] private VirtualAimCursor aimCursor;
     [SerializeField] private BlopShooter blopShooter;
+    [SerializeField] private EventReference OnDashSound;
+    [SerializeField] private EventReference OnDeathSound;
 
     [Header("Movement Tuning")]
     [SerializeField] private float moveSpeed = 6f;
@@ -283,8 +286,9 @@ public class PlayerController : MonoBehaviour
         }
         var ctx = new DeathHitContext(playerPos, hitPointWorld, cutNormal, attackerTip);
         DeathDirector.Instance.PlayDeath(ctx, visualRoot.GetComponent<SpriteRenderer>());
+        
+        AudioManager.PlayAt(OnDeathSound, transform.position); 
 
-        Debug.Log("[Player] Kill triggered. TODO: fade to black and open retry or main menu UI.");
     }
 
     public void Respawn(Vector2 position)
@@ -351,6 +355,9 @@ public class PlayerController : MonoBehaviour
                 if (visualRoot != null)
                     visualRoot.localRotation = originalRot;
             });
+
+        AudioManager.PlayAttached(OnDashSound, this.gameObject);
+
     }
 
     public void KillDashFeel()

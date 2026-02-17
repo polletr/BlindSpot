@@ -73,6 +73,7 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Perception")]
     public float detectRadius = 6f;
     public float loseRadius = 9f;
+    [SerializeField, Min(0f)] float forcedAggroDurationOnHit = 1.25f;
 
     [Header("Debug")]
     public bool drawGizmos = true;
@@ -102,6 +103,7 @@ public abstract class EnemyBase : MonoBehaviour
     float _nextNavPathUpdateTime;
     bool _navPathValid;
     bool _hasNavDestination;
+    float _forcedAggroUntil;
  
 
     protected IEnemyState currentState;
@@ -242,6 +244,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     public bool PlayerInDetectRadius() => HasPlayer && DistToPlayer <= CurrentDetectRadius;
     public bool PlayerBeyondLoseRadius() => !HasPlayer || DistToPlayer >= CurrentLoseRadius;
+    public bool IsForcedAggroActive => Time.time < _forcedAggroUntil;
 
     // Basic “accelerated velocity” steering (feels consistent with your player)
     public void MoveInDirection(Vector2 dir, float speedMultiplier = 1f)
@@ -289,8 +292,19 @@ public abstract class EnemyBase : MonoBehaviour
         if (_enemyVisibility != null && !_enemyVisibility.IsVisible)
             _enemyVisibility.ForceReveal(hitRevealDuration, instant: true);
 
+        TriggerForcedAggro();
+
         if (!IsTargetPlayerDead)
             AggroOnHit();
+    }
+
+    void TriggerForcedAggro()
+    {
+        float duration = Mathf.Max(0f, forcedAggroDurationOnHit);
+        if (duration <= 0f)
+            return;
+
+        _forcedAggroUntil = Mathf.Max(_forcedAggroUntil, Time.time + duration);
     }
 
     public void SetChaseRevealForced(bool forced, bool instant = true)

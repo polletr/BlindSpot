@@ -1,3 +1,4 @@
+using FMODUnity;
 using UnityEngine;
 
 public class BlopShooter : MonoBehaviour
@@ -15,6 +16,10 @@ public class BlopShooter : MonoBehaviour
     [SerializeField, Min(0f)] private float aimingFlashlightRange = 3.5f;
     [SerializeField, Range(1f, 120f)] private float aimingFlashlightAngle = 18f;
     [SerializeField] private Color aimReadyFlashlightColor = new Color(0.6f, 0.95f, 0.65f, 1f);
+
+    [Header("AudioRefs")]
+    [SerializeField] private EventReference OnChargeShot;
+    [SerializeField] private EventReference OnShoot;
 
     private float _cooldownTimer;
     private bool _isCharging;
@@ -68,6 +73,7 @@ public class BlopShooter : MonoBehaviour
         _isCharging = true;
         _chargeTimer = 0f;
         UpdateAimVisuals();
+        AudioManager.PlayAttached(OnChargeShot, this.gameObject);
     }
 
     public bool ReleaseCharge()
@@ -150,6 +156,7 @@ public class BlopShooter : MonoBehaviour
         float maxDistance = aimingFlashlightRange;
         projectile.SetMaxTravelDistance(maxDistance);
         projectile.Launch(direction, projectileSpeed);
+        AudioManager.PlayAt(OnShoot, transform.position);
     }
 
     private float ResolveProjectileVisionRange()

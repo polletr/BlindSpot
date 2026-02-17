@@ -168,6 +168,20 @@ MonoBehaviour:
   aimingFlashlightRange: 7
   aimingFlashlightAngle: 10
   aimReadyFlashlightColor: {r: 0, g: 1, b: 0.14606738, a: 1}
+  OnChargeShot:
+    Guid:
+      Data1: -333007877
+      Data2: 1132896907
+      Data3: -1884700020
+      Data4: 547061589
+    Path: event:/Player/OnChargeShot
+  OnShoot:
+    Guid:
+      Data1: 748705603
+      Data2: 1153572382
+      Data3: -1819426168
+      Data4: 1941926182
+    Path: event:/Player/OnShoot
 --- !u!114 &7528455045347836649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -182,6 +196,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CurrencyWallet
   currentAmount: 0
   capacity: 10
+  OnBlopCollected:
+    Guid:
+      Data1: 1820485630
+      Data2: 1288947165
+      Data3: 1011593103
+      Data4: -1960596402
+    Path: event:/OnBlopCollected
 --- !u!50 &3220147483884696791
 Rigidbody2D:
   serializedVersion: 5
@@ -260,6 +281,13 @@ MonoBehaviour:
   sonar: {fileID: 4648510912414998760}
   aimCursor: {fileID: 6746528590404983058}
   blopShooter: {fileID: 534683125127606861}
+  OnDashSound:
+    Guid:
+      Data1: -928585196
+      Data2: 1297313830
+      Data3: 1074392705
+      Data4: 530408988
+    Path: event:/Player/OnDash
   moveSpeed: 4
   aimingMoveSpeedMultiplier: 0.5
   acceleration: 20

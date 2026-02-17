@@ -49,4 +49,4 @@ MonoBehaviour:
   gameplaySceneName: GameScene
   fadeToBlackDuration: 0.5
   fadeFromBlackDuration: 1
-  postSpawnBlackHold: 0.5
+  postSpawnBlackHold: 2

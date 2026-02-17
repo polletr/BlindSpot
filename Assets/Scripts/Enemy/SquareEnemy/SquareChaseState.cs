@@ -20,7 +20,7 @@ public sealed class SquareChaseState : EnemyStateBase
     {
         var square = (SquareEnemy)e;
 
-        if (square.IsPlayerDead || square.PlayerBeyondLoseRadius())
+        if (square.IsPlayerDead || (square.PlayerBeyondLoseRadius() && !square.IsForcedAggroActive))
         {
             if (square.EnsurePatrolRoute())
                 square.ChangeState(square.PatrolState);
