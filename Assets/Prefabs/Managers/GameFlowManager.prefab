@@ -47,3 +47,6 @@ MonoBehaviour:
   <IsPersistent>k__BackingField: 1
   mainMenuSceneName: MainMenu
   gameplaySceneName: GameScene
+  fadeToBlackDuration: 0.5
+  fadeFromBlackDuration: 1
+  postSpawnBlackHold: 0.5

@@ -46,7 +46,11 @@ public class RunSessionController : MonoBehaviour
     private void OnEnable()
     {
         if (GameFlowManager.HasInstance)
-            GameFlowManager.Instance.RegisterRunSession(this);
+        {
+            var flow = GameFlowManager.Instance;
+            if (flow != null)
+                flow.RegisterRunSession(this);
+        }
 
         if (generateOnStart && Application.isPlaying)
             BeginNewRun();
@@ -55,7 +59,11 @@ public class RunSessionController : MonoBehaviour
     private void OnDisable()
     {
         if (GameFlowManager.HasInstance)
-            GameFlowManager.Instance.UnregisterRunSession(this);
+        {
+            var flow = GameFlowManager.Instance;
+            if (flow != null)
+                flow.UnregisterRunSession(this);
+        }
 
     }
 
@@ -159,6 +167,7 @@ public class RunSessionController : MonoBehaviour
         ConfigurePlayerRuntimeReferences(_activePlayer);
         _activePlayer.Respawn(spawnPosition);
         PlayerSpawned?.Invoke(_activePlayer);
+        RebindEnemiesToCurrentPlayer(_activePlayer);
     }
 
     private void DisablePlayerInput()
@@ -235,6 +244,22 @@ public class RunSessionController : MonoBehaviour
 
             // Ensure the continuous cone visual is (re)initialized after runtime pool wiring.
             sonar.ForceFlashlightState(sonar.flashlightEnabled);
+        }
+    }
+
+    private static void RebindEnemiesToCurrentPlayer(PlayerController player)
+    {
+        if (player == null)
+            return;
+
+        var enemies = FindObjectsByType<EnemyBase>(FindObjectsSortMode.None);
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            var enemy = enemies[i];
+            if (enemy == null)
+                continue;
+
+            enemy.SetPlayerTarget(player);
         }
     }
 

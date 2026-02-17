@@ -475,6 +475,12 @@ public abstract class EnemyBase : MonoBehaviour
         CachePlayerControllerReference();
         if (_enemyVisibility != null)
             _enemyVisibility.player = player;
+        InvalidateNavPath();
+    }
+
+    public void SetPlayerTarget(PlayerController controller)
+    {
+        AssignPlayerTarget(controller);
     }
 
     void SubscribeToPlayerSpawnEvents()
@@ -482,12 +488,16 @@ public abstract class EnemyBase : MonoBehaviour
         if (!GameFlowManager.HasInstance)
             return;
 
-        GameFlowManager.Instance.PlayerSpawned += HandleGlobalPlayerSpawned;
+        var flow = GameFlowManager.Instance;
+        if (flow == null)
+            return;
 
-        var current = GameFlowManager.Instance.CurrentPlayer;
+        flow.PlayerSpawned += HandleGlobalPlayerSpawned;
+
+        var current = flow.CurrentPlayer;
         if (current == null)
         {
-            var session = GameFlowManager.Instance.ActiveRunSession;
+            var session = flow.ActiveRunSession;
             if (session != null)
                 current = session.ActivePlayer;
         }
@@ -501,7 +511,11 @@ public abstract class EnemyBase : MonoBehaviour
         if (!GameFlowManager.HasInstance)
             return;
 
-        GameFlowManager.Instance.PlayerSpawned -= HandleGlobalPlayerSpawned;
+        var flow = GameFlowManager.Instance;
+        if (flow == null)
+            return;
+
+        flow.PlayerSpawned -= HandleGlobalPlayerSpawned;
     }
 
     void HandleGlobalPlayerSpawned(PlayerController controller)

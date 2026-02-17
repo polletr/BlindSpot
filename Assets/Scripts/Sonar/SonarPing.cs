@@ -74,6 +74,7 @@ public class SonarPing : MonoBehaviour
     float _aimModeAngle;
     Color _aimModeColor;
     float _aimBlend;
+    float _aimColorBlend;
     float _aimReturnDuration = 0.2f;
     float _aimReturnDelayRemaining;
 
@@ -101,7 +102,7 @@ public class SonarPing : MonoBehaviour
     private float BaseFlashlightAngle => angleDeg * (UpgradeMgr != null ? UpgradeMgr.FlashlightAngleMultiplier : 1f);
     private float EffectiveFlashlightRange => Mathf.Lerp(BaseFlashlightRange, Mathf.Max(0f, _aimModeRange), _aimBlend);
     private float EffectiveFlashlightAngle => Mathf.Lerp(BaseFlashlightAngle, Mathf.Max(1f, _aimModeAngle), _aimBlend);
-    private Color EffectiveFlashlightColor => Color.Lerp(flashlightColor, _aimModeColor, _aimBlend);
+    private Color EffectiveFlashlightColor => Color.Lerp(flashlightColor, _aimModeColor, _aimColorBlend);
     private bool ShouldFlashlightBeActive => flashlightEnabled || (UpgradeMgr != null && UpgradeMgr.RadarAlwaysOn);
     PlayerVisionField VisionField => PlayerVisionField.Instance;
     const string EnemyLayerName = "Enemies";
@@ -142,7 +143,7 @@ public class SonarPing : MonoBehaviour
 
     void LateUpdate()
     {
-        if (!_aimModeActive && _aimBlend > 0f)
+        if (!_aimModeActive && (_aimBlend > 0f || _aimColorBlend > 0f))
         {
             if (_aimReturnDelayRemaining > 0f)
             {
@@ -150,8 +151,10 @@ public class SonarPing : MonoBehaviour
             }
             else
             {
-            float returnDuration = Mathf.Max(0.01f, _aimReturnDuration);
-            _aimBlend = Mathf.MoveTowards(_aimBlend, 0f, Time.deltaTime / returnDuration);
+                float returnDuration = Mathf.Max(0.01f, _aimReturnDuration);
+                float step = Time.deltaTime / returnDuration;
+                _aimBlend = Mathf.MoveTowards(_aimBlend, 0f, step);
+                _aimColorBlend = Mathf.MoveTowards(_aimColorBlend, 0f, step);
             }
         }
 
@@ -269,6 +272,7 @@ public class SonarPing : MonoBehaviour
     {
         _aimBlend = Mathf.Clamp01(charge01);
         _aimModeColor = readyColor;
+        _aimColorBlend = _aimBlend >= 0.999f ? 1f : 0f;
     }
 
     public void ClearAimModeOverride(float returnDuration, float returnDelay)

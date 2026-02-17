@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 /// <summary>
 /// Persistent bootstrapper that owns scene transitions and high-level dungeon flow.
@@ -12,9 +13,18 @@ public class GameFlowManager : Singleton<GameFlowManager>
     [SerializeField] private string mainMenuSceneName = "MainMenu";
     [SerializeField] private string gameplaySceneName = "SampleScene";
 
+    [Header("Screen Fade")]
+    [SerializeField, Min(0f)] private float fadeToBlackDuration = 0.2f;
+    [SerializeField, Min(0f)] private float fadeFromBlackDuration = 0.25f;
+    [SerializeField, Min(0f)] private float postSpawnBlackHold = 2f;
+
     private RunSessionController _runSession;
     private PlayerController _trackedPlayer;
     private bool _isLoadingRunScene;
+    private bool _isTransitioning;
+    private CanvasGroup _fadeCanvasGroup;
+    private Text _fadeDungeonLabel;
+    private Coroutine _transitionRoutine;
 
     public RunSessionController ActiveRunSession => _runSession;
     public PlayerController CurrentPlayer => _trackedPlayer;
@@ -75,27 +85,18 @@ public class GameFlowManager : Singleton<GameFlowManager>
 
     public void StartRunFromMenu()
     {
-        if (SceneManager.GetActiveScene().name == gameplaySceneName && _runSession != null)
-        {
-            StartFreshRun();
-            return;
-        }
-
-        if (_isLoadingRunScene)
+        if (_isTransitioning)
             return;
 
-        StartCoroutine(LoadRunSceneRoutine());
+        StartRunTransition();
     }
 
     public void RestartRun()
     {
-        if (_runSession == null)
-        {
-            StartRunFromMenu();
+        if (_isTransitioning)
             return;
-        }
 
-        StartFreshRun();
+        StartRunTransition();
     }
 
     public void ReturnToMainMenu()
@@ -120,17 +121,45 @@ public class GameFlowManager : Singleton<GameFlowManager>
         }
     }
 
-    private IEnumerator LoadRunSceneRoutine()
+    private void StartRunTransition()
     {
+        if (_transitionRoutine != null)
+            StopCoroutine(_transitionRoutine);
+
+        _transitionRoutine = StartCoroutine(StartRunTransitionRoutine());
+    }
+
+    private IEnumerator StartRunTransitionRoutine()
+    {
+        _isTransitioning = true;
         _isLoadingRunScene = true;
         Time.timeScale = 1f;
-        yield return SceneManager.LoadSceneAsync(gameplaySceneName, LoadSceneMode.Single);
-        _isLoadingRunScene = false;
 
-        // RunSessionController registers itself in OnEnable; wait a frame then bootstrap.
+        EnsureFadeOverlay();
+        yield return FadeOverlay(targetAlpha: 1f, fadeToBlackDuration);
+
+        yield return SceneManager.LoadSceneAsync(gameplaySceneName, LoadSceneMode.Single);
+
+        // RunSessionController registers itself in OnEnable.
+        float waitTimeout = 2f;
+        while (_runSession == null && waitTimeout > 0f)
+        {
+            waitTimeout -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        _isLoadingRunScene = false;
+        StartFreshRun();
+        UpdateFadeOverlayDungeonLabel();
+
+        // Let camera follow and player visuals settle before revealing the scene.
         yield return null;
-        if (_runSession != null)
-            StartFreshRun();
+        if (postSpawnBlackHold > 0f)
+            yield return new WaitForSecondsRealtime(postSpawnBlackHold);
+
+        yield return FadeOverlay(targetAlpha: 0f, fadeFromBlackDuration);
+        _isTransitioning = false;
+        _transitionRoutine = null;
     }
 
     private void StartFreshRun()
@@ -199,7 +228,7 @@ public class GameFlowManager : Singleton<GameFlowManager>
             RegisterRunSession(session);
         }
 
-        if (!_isLoadingRunScene && _runSession != null)
+        if (!_isLoadingRunScene && !_isTransitioning && _runSession != null)
             StartFreshRun();
     }
 
@@ -215,5 +244,104 @@ public class GameFlowManager : Singleton<GameFlowManager>
     public void HandleBlopsChanged(int current, int total)
     {
         BlopsChanged?.Invoke(current, total);
+    }
+
+    private void EnsureFadeOverlay()
+    {
+        if (_fadeCanvasGroup != null)
+            return;
+
+        var fadeRoot = new GameObject("ScreenFadeOverlay");
+        fadeRoot.transform.SetParent(transform, false);
+
+        var canvas = fadeRoot.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = short.MaxValue;
+
+        fadeRoot.AddComponent<GraphicRaycaster>();
+        var scaler = fadeRoot.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        _fadeCanvasGroup = fadeRoot.AddComponent<CanvasGroup>();
+        _fadeCanvasGroup.alpha = 0f;
+        _fadeCanvasGroup.interactable = false;
+        _fadeCanvasGroup.blocksRaycasts = false;
+
+        var imageGO = new GameObject("Black");
+        imageGO.transform.SetParent(fadeRoot.transform, false);
+        var image = imageGO.AddComponent<Image>();
+        image.color = Color.black;
+
+        var rect = image.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var labelGO = new GameObject("DungeonLabel");
+        labelGO.transform.SetParent(fadeRoot.transform, false);
+
+        _fadeDungeonLabel = labelGO.AddComponent<Text>();
+        _fadeDungeonLabel.alignment = TextAnchor.MiddleCenter;
+        _fadeDungeonLabel.color = Color.white;
+        _fadeDungeonLabel.fontSize = 82;
+        _fadeDungeonLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+        _fadeDungeonLabel.verticalOverflow = VerticalWrapMode.Overflow;
+        _fadeDungeonLabel.raycastTarget = false;
+        _fadeDungeonLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if (_fadeDungeonLabel.font == null)
+            _fadeDungeonLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        _fadeDungeonLabel.text = string.Empty;
+
+        var labelRect = _fadeDungeonLabel.rectTransform;
+        labelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        labelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        labelRect.pivot = new Vector2(0.5f, 0.5f);
+        labelRect.anchoredPosition = Vector2.zero;
+        labelRect.sizeDelta = new Vector2(900f, 120f);
+    }
+
+    private IEnumerator FadeOverlay(float targetAlpha, float duration)
+    {
+        if (_fadeCanvasGroup == null)
+            yield break;
+
+        targetAlpha = Mathf.Clamp01(targetAlpha);
+        if (duration <= 0f)
+        {
+            _fadeCanvasGroup.alpha = targetAlpha;
+            _fadeCanvasGroup.blocksRaycasts = targetAlpha > 0.001f;
+            yield break;
+        }
+
+        float startAlpha = _fadeCanvasGroup.alpha;
+        float elapsed = 0f;
+
+        _fadeCanvasGroup.blocksRaycasts = true;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            _fadeCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+            yield return null;
+        }
+
+        _fadeCanvasGroup.alpha = targetAlpha;
+        _fadeCanvasGroup.blocksRaycasts = targetAlpha > 0.001f;
+    }
+
+    private void UpdateFadeOverlayDungeonLabel()
+    {
+        if (_fadeDungeonLabel == null)
+            return;
+
+        int dungeonNumber = 1;
+        var dungeon = DungeonRunManager.Instance;
+        if (dungeon != null)
+            dungeonNumber = Mathf.Max(1, dungeon.dungeonIndex);
+
+        _fadeDungeonLabel.text = $"{dungeonNumber}";
     }
 }
