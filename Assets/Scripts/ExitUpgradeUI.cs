@@ -21,7 +21,7 @@ public class ExitUpgradeUI : MonoBehaviour
         }
     }
 
-    public void Show(System.Action<RunUpgrade> onSelected)
+    public bool Show(System.Action<RunUpgrade> onSelected)
     {
         EnsureCanvasGroup();
 
@@ -35,14 +35,22 @@ public class ExitUpgradeUI : MonoBehaviour
         var manager = UpgradeManager.Instance;
         if (manager == null)
         {
-            ConfigureCard(cardLeft, null, 0, null);
-            ConfigureCard(cardRight, null, 0, null);
-            return;
+            bool hasLeft = ConfigureCard(cardLeft, null, 0, null);
+            bool hasRight = ConfigureCard(cardRight, null, 0, null);
+            bool hasAny = hasLeft || hasRight;
+            if (!hasAny)
+                Hide();
+            return hasAny;
         }
 
         var options = manager.GetRandomUpgrades(2);
-        ConfigureCard(cardLeft, options, 0, onSelected);
-        ConfigureCard(cardRight, options, 1, onSelected);
+        bool hasOptionLeft = ConfigureCard(cardLeft, options, 0, onSelected);
+        bool hasOptionRight = ConfigureCard(cardRight, options, 1, onSelected);
+        bool hasOptions = hasOptionLeft || hasOptionRight;
+        if (!hasOptions)
+            Hide();
+
+        return hasOptions;
     }
 
     public void Hide()
@@ -50,17 +58,18 @@ public class ExitUpgradeUI : MonoBehaviour
         StartFade(0f, () => gameObject.SetActive(false));
     }
 
-    private static void ConfigureCard(UpgradeCard card, RunUpgrade[] options, int index, System.Action<RunUpgrade> onSelected)
+    private static bool ConfigureCard(UpgradeCard card, RunUpgrade[] options, int index, System.Action<RunUpgrade> onSelected)
     {
         if (card == null)
-            return;
+            return false;
 
         bool hasOption = options != null && index < options.Length && options[index] != null;
         card.gameObject.SetActive(hasOption);
         if (!hasOption)
-            return;
+            return false;
 
         card.Setup(options[index], onSelected);
+        return true;
     }
 
     private void EnsureCanvasGroup()

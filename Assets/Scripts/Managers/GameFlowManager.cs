@@ -33,6 +33,7 @@ public class GameFlowManager : Singleton<GameFlowManager>
     public event Action<PlayerController> PlayerSpawned;
     public event Action PlayerDied;
     public event Action PlayerRespawned;
+    public event Action<PlayerController> PlayerReachedExit;
     public event Action GameWon;
     public event Action<int, int> BlopsChanged;
 
@@ -107,6 +108,9 @@ public class GameFlowManager : Singleton<GameFlowManager>
 
     public void HandleDungeonCompleted()
     {
+        if (_isTransitioning)
+            return;
+
         var dungeon = DungeonRunManager.Instance;
         if (dungeon == null)
             return;
@@ -117,8 +121,16 @@ public class GameFlowManager : Singleton<GameFlowManager>
         }
         else
         {
-            _runSession?.BeginNextDungeon();
+            StartNextDungeonTransition();
         }
+    }
+
+    public void HandlePlayerReachedExit()
+    {
+        if (_trackedPlayer != null)
+            _trackedPlayer.SetTemporaryInvincibility(true);
+
+        PlayerReachedExit?.Invoke(_trackedPlayer);
     }
 
     private void StartRunTransition()
@@ -129,6 +141,14 @@ public class GameFlowManager : Singleton<GameFlowManager>
         _transitionRoutine = StartCoroutine(StartRunTransitionRoutine());
     }
 
+    private void StartNextDungeonTransition()
+    {
+        if (_transitionRoutine != null)
+            StopCoroutine(_transitionRoutine);
+
+        _transitionRoutine = StartCoroutine(AdvanceDungeonRoutine());
+    }
+
     private IEnumerator StartRunTransitionRoutine()
     {
         _isTransitioning = true;
@@ -136,6 +156,7 @@ public class GameFlowManager : Singleton<GameFlowManager>
         Time.timeScale = 1f;
 
         EnsureFadeOverlay();
+        ClearFadeOverlayDungeonLabel();
         yield return FadeOverlay(targetAlpha: 1f, fadeToBlackDuration);
 
         yield return SceneManager.LoadSceneAsync(gameplaySceneName, LoadSceneMode.Single);
@@ -158,6 +179,37 @@ public class GameFlowManager : Singleton<GameFlowManager>
             yield return new WaitForSecondsRealtime(postSpawnBlackHold);
 
         yield return FadeOverlay(targetAlpha: 0f, fadeFromBlackDuration);
+        ClearFadeOverlayDungeonLabel();
+        _isTransitioning = false;
+        _transitionRoutine = null;
+    }
+
+    private IEnumerator AdvanceDungeonRoutine()
+    {
+        _isTransitioning = true;
+        Time.timeScale = 1f;
+
+        EnsureFadeOverlay();
+        ClearFadeOverlayDungeonLabel();
+        yield return FadeOverlay(targetAlpha: 1f, fadeToBlackDuration);
+
+        if (_runSession == null)
+        {
+            var session = FindFirstObjectByType<RunSessionController>();
+            if (session != null)
+                RegisterRunSession(session);
+        }
+
+        _runSession?.BeginNextDungeon();
+        UpdateFadeOverlayDungeonLabel();
+
+        // Let camera follow and player visuals settle before revealing the scene.
+        yield return null;
+        if (postSpawnBlackHold > 0f)
+            yield return new WaitForSecondsRealtime(postSpawnBlackHold);
+
+        yield return FadeOverlay(targetAlpha: 0f, fadeFromBlackDuration);
+        ClearFadeOverlayDungeonLabel();
         _isTransitioning = false;
         _transitionRoutine = null;
     }
@@ -191,6 +243,8 @@ public class GameFlowManager : Singleton<GameFlowManager>
             _trackedPlayer.PlayerDied += HandlePlayerDeath;
             _trackedPlayer.PlayerRespawned += HandlePlayerRespawned;
         }
+
+        _trackedPlayer.SetTemporaryInvincibility(false);
 
         PlayerSpawned?.Invoke(player);
     }
@@ -343,5 +397,13 @@ public class GameFlowManager : Singleton<GameFlowManager>
             dungeonNumber = Mathf.Max(1, dungeon.dungeonIndex);
 
         _fadeDungeonLabel.text = $"{dungeonNumber}";
+    }
+
+    private void ClearFadeOverlayDungeonLabel()
+    {
+        if (_fadeDungeonLabel == null)
+            return;
+
+        _fadeDungeonLabel.text = string.Empty;
     }
 }

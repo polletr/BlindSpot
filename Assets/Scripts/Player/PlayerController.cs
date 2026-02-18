@@ -52,6 +52,7 @@ public class PlayerController : MonoBehaviour
     // Status
     public bool IsDashing => _currentState == DashState;
     public bool IsDead => _currentState == DeadState;
+    public bool IsTemporarilyInvincible => _isTemporarilyInvincible;
 
     public event Action<PlayerController> PlayerDied;
     public event Action<PlayerController> PlayerRespawned;
@@ -69,6 +70,7 @@ public class PlayerController : MonoBehaviour
     private bool _movementInputLocked;
     private bool _flashlightEnabledBeforeKill = true;
     private Vector3 _visualRootRestLocalPos = Vector3.zero;
+    private bool _isTemporarilyInvincible;
 
     private UpgradeManager _upgradeManager;
     private UpgradeManager UpgradeMgr
@@ -261,7 +263,7 @@ public class PlayerController : MonoBehaviour
     // External hook for lethal contact
     public void KillPlayer(Vector3 hitPointWorld, Transform attackerTip)
     {
-        if (IsDead) return;
+        if (IsDead || _isTemporarilyInvincible) return;
 
         SetMovementInputLocked(true);
         StopAimShake();
@@ -294,6 +296,7 @@ public class PlayerController : MonoBehaviour
     public void Respawn(Vector2 position)
     {
         transform.position = position;
+        _isTemporarilyInvincible = false;
         SetMovementInputLocked(false);
         StopAimShake();
         blopShooter?.ReleaseCharge();
@@ -303,6 +306,11 @@ public class PlayerController : MonoBehaviour
 
         ChangeState(MoveState);
         PlayerRespawned?.Invoke(this);
+    }
+
+    public void SetTemporaryInvincibility(bool invincible)
+    {
+        _isTemporarilyInvincible = invincible;
     }
 
     // ------------------------

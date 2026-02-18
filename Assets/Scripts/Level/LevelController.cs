@@ -165,7 +165,23 @@ public class LevelController : MonoBehaviour
 
     private static List<TSpawner> PickRandomSpawners<TSpawner>(List<TSpawner> source, int count) where TSpawner : Spawner
     {
-        List<TSpawner> pool = new List<TSpawner>(source);
+        List<TSpawner> selected = new List<TSpawner>();
+        List<TSpawner> pool = new List<TSpawner>();
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            TSpawner spawner = source[i];
+            if (spawner == null)
+                continue;
+
+            if (spawner.AlwaysOn)
+            {
+                selected.Add(spawner);
+                continue;
+            }
+
+            pool.Add(spawner);
+        }
 
         for (int i = 0; i < pool.Count; i++)
         {
@@ -173,10 +189,15 @@ public class LevelController : MonoBehaviour
             (pool[i], pool[randomIndex]) = (pool[randomIndex], pool[i]);
         }
 
-        if (count < pool.Count)
-            pool.RemoveRange(count, pool.Count - count);
+        int targetCount = Mathf.Max(count, selected.Count);
+        int remainingSlots = Mathf.Max(0, targetCount - selected.Count);
+        if (remainingSlots > pool.Count)
+            remainingSlots = pool.Count;
 
-        return pool;
+        for (int i = 0; i < remainingSlots; i++)
+            selected.Add(pool[i]);
+
+        return selected;
     }
 
 }

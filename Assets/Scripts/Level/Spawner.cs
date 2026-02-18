@@ -3,6 +3,7 @@ using UnityEngine;
 public abstract class Spawner : MonoBehaviour
 {
     [SerializeField] protected GameObject objInstance;
+    public bool AlwaysOn = false;
 
     public virtual void SpawnObject(GameObject objToSpawn)
     {

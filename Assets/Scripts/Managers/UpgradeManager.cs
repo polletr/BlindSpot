@@ -103,12 +103,20 @@ public class UpgradeManager : Singleton<UpgradeManager>
         if (runUpgradePool == null || runUpgradePool.Count == 0 || count <= 0)
             return Array.Empty<RunUpgrade>();
 
-        int finalCount = Mathf.Clamp(count, 0, runUpgradePool.Count);
-        if (finalCount == 0)
-            return Array.Empty<RunUpgrade>();
-
         var poolCopy = ListPool<RunUpgrade>.Get();
-        poolCopy.AddRange(runUpgradePool);
+        for (int i = 0; i < runUpgradePool.Count; i++)
+        {
+            var candidate = runUpgradePool[i];
+            if (candidate != null)
+                poolCopy.Add(candidate);
+        }
+
+        int finalCount = Mathf.Clamp(count, 0, poolCopy.Count);
+        if (finalCount == 0)
+        {
+            ListPool<RunUpgrade>.Release(poolCopy);
+            return Array.Empty<RunUpgrade>();
+        }
 
         var selections = new RunUpgrade[finalCount];
         for (int i = 0; i < finalCount; i++)

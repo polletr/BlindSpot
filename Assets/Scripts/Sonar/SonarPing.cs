@@ -104,6 +104,11 @@ public class SonarPing : MonoBehaviour
     private float EffectiveFlashlightAngle => Mathf.Lerp(BaseFlashlightAngle, Mathf.Max(1f, _aimModeAngle), _aimBlend);
     private Color EffectiveFlashlightColor => Color.Lerp(flashlightColor, _aimModeColor, _aimColorBlend);
     private bool ShouldFlashlightBeActive => flashlightEnabled || (UpgradeMgr != null && UpgradeMgr.RadarAlwaysOn);
+    public bool IsAtBaseAimVisual =>
+        !_aimModeActive &&
+        _aimReturnDelayRemaining <= 0f &&
+        _aimBlend <= 0.001f &&
+        _aimColorBlend <= 0.001f;
     PlayerVisionField VisionField => PlayerVisionField.Instance;
     const string EnemyLayerName = "Enemies";
     const string RevealableLayerName = "Revealables";

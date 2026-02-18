@@ -531,6 +531,7 @@ MonoBehaviour:
   rotateSpeed: 720
   detectRadius: 3
   loseRadius: 5
+  forcedAggroDurationOnHit: 1.25
   drawGizmos: 1
   maxHealth: 5
   hitRevealDuration: 0.9

@@ -10,6 +10,7 @@ public class BlopShooter : MonoBehaviour
     [SerializeField] private BlopProjectile projectilePrefab;
 
     [Header("Fire Settings")]
+    [Tooltip("Fallback cooldown only used when SonarPing is missing.")]
     [SerializeField, Min(0f)] private float fireCooldown = 0.12f;
     [SerializeField] private float projectileSpeed = 16f;
     [SerializeField, Min(0.01f)] private float aimReadyTime = 0.35f;
@@ -26,6 +27,7 @@ public class BlopShooter : MonoBehaviour
     private float _chargeTimer;
     private SonarPing _sonar;
     private bool _aimOverrideApplied;
+    private bool _waitingForFlashlightRecovery;
 
     private void Awake()
     {
@@ -47,6 +49,9 @@ public class BlopShooter : MonoBehaviour
         if (_cooldownTimer > 0f)
             _cooldownTimer -= Time.deltaTime;
 
+        if (_waitingForFlashlightRecovery && _sonar != null && _sonar.IsAtBaseAimVisual)
+            _waitingForFlashlightRecovery = false;
+
         if (_isCharging)
             _chargeTimer += Time.deltaTime;
 
@@ -57,6 +62,8 @@ public class BlopShooter : MonoBehaviour
     {
         _isCharging = false;
         _chargeTimer = 0f;
+        _waitingForFlashlightRecovery = false;
+        _cooldownTimer = 0f;
         if (_sonar != null && _aimOverrideApplied)
             _sonar.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
         _aimOverrideApplied = false;
@@ -92,7 +99,10 @@ public class BlopShooter : MonoBehaviour
         Vector2 aimDir = GetAimDirection();
         FireProjectile(aimDir);
 
-        _cooldownTimer = fireCooldown;
+        if (_sonar != null)
+            _waitingForFlashlightRecovery = true;
+        else
+            _cooldownTimer = fireCooldown;
         return true;
     }
 
@@ -102,6 +112,9 @@ public class BlopShooter : MonoBehaviour
             return false;
 
         if (_cooldownTimer > 0f)
+            return false;
+
+        if (_waitingForFlashlightRecovery)
             return false;
 
         return wallet.HasBlops;

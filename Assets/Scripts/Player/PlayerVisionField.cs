@@ -279,7 +279,6 @@ public class PlayerVisionField : MonoBehaviour
     void LogContact(string label, Component target)
     {
         if (!debugLogs || target == null) return;
-        Debug.Log($"[Vision] {label}: {target.name}", target);
     }
 
     void OnDrawGizmosSelected()
