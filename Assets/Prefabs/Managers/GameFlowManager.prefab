@@ -47,6 +47,21 @@ MonoBehaviour:
   <IsPersistent>k__BackingField: 1
   mainMenuSceneName: MainMenu
   gameplaySceneName: GameScene
+  mainMenuMusicEvent:
+    Guid:
+      Data1: 1963756809
+      Data2: 1255485380
+      Data3: -30561621
+      Data4: 381993366
+    Path: event:/Enemies/OnChase
+  gameplayMusicEvent:
+    Guid:
+      Data1: 782184909
+      Data2: 1161613304
+      Data3: -1884418163
+      Data4: 1660650811
+    Path: event:/Ambiance/GameBGAmbiance
   fadeToBlackDuration: 0.5
   fadeFromBlackDuration: 1
   postSpawnBlackHold: 2
+  font: {fileID: 12800000, guid: 22f203a528349924cbc1fb621b28d5e6, type: 3}

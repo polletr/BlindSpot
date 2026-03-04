@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{393de537-56cd-4c0a-a2cd-fd28045f7ad4}">
+		<property name="assetPath">
+			<value>Drone - Magic Pill.wav</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>44.0999985</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>6.3999773242630384</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{8352fdc4-5895-4de3-909c-78be8fa00376}</destination>
+		</relationship>
+	</object>
+</objects>

@@ -228,8 +228,8 @@ public class RunSessionController : MonoBehaviour
                 Debug.LogWarning("[RunSessionController] crosshairCamera is not assigned; aim projection may be incorrect.");
         }
 
-        var sonar = player.GetComponent<SonarPing>();
-        if (sonar != null)
+        var flashlight = player.GetComponent<PlayerFlashlight>();
+        if (flashlight != null)
         {
             if (sonarConePool == null && SonarPoolHub.TryGet(out var cone, out _))
             {
@@ -238,12 +238,12 @@ public class RunSessionController : MonoBehaviour
             }
 
             if (sonarConePool != null)
-                sonar.conePool = sonarConePool;
+                flashlight.conePool = sonarConePool;
             else
                 Debug.LogWarning("[RunSessionController] sonarConePool is not assigned; flashlight cone visual cannot be created.");
 
             // Ensure the continuous cone visual is (re)initialized after runtime pool wiring.
-            sonar.ForceFlashlightState(sonar.flashlightEnabled);
+            flashlight.ForceFlashlightState(flashlight.flashlightEnabled);
         }
     }
 

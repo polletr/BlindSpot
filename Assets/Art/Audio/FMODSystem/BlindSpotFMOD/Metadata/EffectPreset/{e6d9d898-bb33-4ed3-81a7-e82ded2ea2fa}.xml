@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="EffectPreset" id="{e6d9d898-bb33-4ed3-81a7-e82ded2ea2fa}">
+		<property name="name">
+			<value>Tremolo</value>
+		</property>
+		<relationship name="folder">
+			<destination>{b38b3b32-de4a-436e-a9a5-8db8246561c5}</destination>
+		</relationship>
+		<relationship name="effect">
+			<destination>{01db5d63-7d57-44fb-9b71-60f24de7bdf1}</destination>
+		</relationship>
+	</object>
+	<object class="TremoloEffect" id="{01db5d63-7d57-44fb-9b71-60f24de7bdf1}">
+		<property name="frequency">
+			<value>14</value>
+		</property>
+		<property name="duty">
+			<value>0.75999999</value>
+		</property>
+	</object>
+</objects>

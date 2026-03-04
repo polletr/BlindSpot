@@ -1179,7 +1179,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 11
+  orthographic size: 12
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1969,7 +1969,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 34
-    OrthographicSize: 11
+    OrthographicSize: 12
     NearClipPlane: 0.3
     FarClipPlane: 1000
     Dutch: 0
@@ -3382,6 +3382,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: DeathDirector
       objectReference: {fileID: 0}
+    - target: {fileID: 8876189925135681177, guid: 36089a55c0b22ff4f917a7bbd0647d62, type: 3}
+      propertyPath: continueUI
+      value: 
+      objectReference: {fileID: 420531903}
     - target: {fileID: 8876189925135681177, guid: 36089a55c0b22ff4f917a7bbd0647d62, type: 3}
       propertyPath: deathCamera
       value: 

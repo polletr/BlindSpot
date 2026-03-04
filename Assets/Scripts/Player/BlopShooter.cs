@@ -25,7 +25,7 @@ public class BlopShooter : MonoBehaviour
     private float _cooldownTimer;
     private bool _isCharging;
     private float _chargeTimer;
-    private SonarPing _sonar;
+    private PlayerFlashlight _flashlight;
     private bool _aimOverrideApplied;
     private bool _waitingForFlashlightRecovery;
 
@@ -41,7 +41,7 @@ public class BlopShooter : MonoBehaviour
             firePoint = transform;
 
         if (player != null)
-            _sonar = player.GetComponent<SonarPing>();
+            _flashlight = player.GetComponent<PlayerFlashlight>();
     }
 
     private void Update()
@@ -49,7 +49,7 @@ public class BlopShooter : MonoBehaviour
         if (_cooldownTimer > 0f)
             _cooldownTimer -= Time.deltaTime;
 
-        if (_waitingForFlashlightRecovery && _sonar != null && _sonar.IsAtBaseAimVisual)
+        if (_waitingForFlashlightRecovery && _flashlight != null && _flashlight.IsAtBaseAimVisual)
             _waitingForFlashlightRecovery = false;
 
         if (_isCharging)
@@ -64,8 +64,8 @@ public class BlopShooter : MonoBehaviour
         _chargeTimer = 0f;
         _waitingForFlashlightRecovery = false;
         _cooldownTimer = 0f;
-        if (_sonar != null && _aimOverrideApplied)
-            _sonar.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
+        if (_flashlight != null && _aimOverrideApplied)
+            _flashlight.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
         _aimOverrideApplied = false;
     }
 
@@ -99,7 +99,7 @@ public class BlopShooter : MonoBehaviour
         Vector2 aimDir = GetAimDirection();
         FireProjectile(aimDir);
 
-        if (_sonar != null)
+        if (_flashlight != null)
             _waitingForFlashlightRecovery = true;
         else
             _cooldownTimer = fireCooldown;
@@ -122,28 +122,28 @@ public class BlopShooter : MonoBehaviour
 
     private void UpdateAimVisuals()
     {
-        if (_sonar == null)
+        if (_flashlight == null)
         {
             if (player == null) return;
-            _sonar = player.GetComponent<SonarPing>();
-            if (_sonar == null) return;
+            _flashlight = player.GetComponent<PlayerFlashlight>();
+            if (_flashlight == null) return;
         }
 
         if (_isCharging)
         {
             if (!_aimOverrideApplied)
             {
-                _sonar.SetAimModeOverride(true, aimingFlashlightRange, aimingFlashlightAngle);
+                _flashlight.SetAimModeOverride(true, aimingFlashlightRange, aimingFlashlightAngle);
                 _aimOverrideApplied = true;
             }
 
-            _sonar.SetAimChargeVisual(ChargeProgress01, aimReadyFlashlightColor);
+            _flashlight.SetAimChargeVisual(ChargeProgress01, aimReadyFlashlightColor);
             return;
         }
 
         if (_aimOverrideApplied)
         {
-            _sonar.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
+            _flashlight.ClearAimModeOverride(aimReadyTime * 0.5f, 0.5f);
             _aimOverrideApplied = false;
         }
     }

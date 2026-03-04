@@ -9,10 +9,17 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private SonarPing sonar;
+    [SerializeField] private PlayerFlashlight flashlight;
     [SerializeField] private VirtualAimCursor aimCursor;
     [SerializeField] private BlopShooter blopShooter;
+    [SerializeField] private BlopWallet blopWallet;
     [SerializeField] private EventReference OnDashSound;
     [SerializeField] private EventReference OnDeathSound;
+    [SerializeField] private EventReference OnFlashlight;
+
+    [Header("Ping")]
+    [SerializeField, Min(0)] private int pingBlopCost = 3;
+    [SerializeField, Min(0f)] private float pingInputDebounceSeconds = 0.08f;
 
     [Header("Movement Tuning")]
     [SerializeField] private float moveSpeed = 6f;
@@ -32,11 +39,6 @@ public class PlayerController : MonoBehaviour
     public float squashAmount = 0.75f;
     public float stretchTime = 0.06f;
     public float settleTime = 0.10f;
-
-    [Header("Aim Feel (Optional)")]
-    [SerializeField] private float aimShakeStrength = 0.06f;
-    [SerializeField] private int aimShakeVibrato = 20;
-    [SerializeField] private float aimShakeRandomness = 70f;
 
     // Public accessors used by states
     public Rigidbody2D RB { get; private set; }
@@ -71,6 +73,8 @@ public class PlayerController : MonoBehaviour
     private bool _flashlightEnabledBeforeKill = true;
     private Vector3 _visualRootRestLocalPos = Vector3.zero;
     private bool _isTemporarilyInvincible;
+    private bool _pingInputHeld;
+    private float _lastPingInputTime = -999f;
 
     private UpgradeManager _upgradeManager;
     private UpgradeManager UpgradeMgr
@@ -87,13 +91,11 @@ public class PlayerController : MonoBehaviour
     private float DashDistanceMultiplier => UpgradeMgr != null ? UpgradeMgr.DashDistanceMultiplier : 1f;
     private float DashCooldownMultiplier => UpgradeMgr != null ? UpgradeMgr.DashCooldownMultiplier : 1f;
 
-    public bool IsAiming => blopShooter != null && blopShooter.IsCharging;
     public float MovementSpeed
     {
         get
         {
-            float aimingMultiplier = IsAiming ? Mathf.Clamp(aimingMoveSpeedMultiplier, 0.1f, 1f) : 1f;
-            return moveSpeed * VelocityMultiplier * aimingMultiplier;
+            return moveSpeed * VelocityMultiplier;
         }
     }
     public float DashSpeed => dashSpeed * DashDistanceMultiplier;
@@ -130,17 +132,35 @@ public class PlayerController : MonoBehaviour
         if (aimCursor != null)
             aimCursor.SetAimOrigin(transform);
 
-        if (blopShooter == null)
-            blopShooter = GetComponent<BlopShooter>();
+        if (blopWallet == null)
+            blopWallet = GetComponent<BlopWallet>();
+        if (blopWallet == null)
+            blopWallet = GetComponentInChildren<BlopWallet>(true);
+        if (blopWallet == null)
+            blopWallet = GetComponentInParent<BlopWallet>();
 
         if (visualRoot != null)
             _visualRootRestLocalPos = visualRoot.localPosition;
 
         if (sonar == null) sonar = GetComponent<SonarPing>();
-        if (sonar != null)
+        bool createdFlashlight = false;
+        if (flashlight == null) flashlight = GetComponent<PlayerFlashlight>();
+        if (flashlight == null)
         {
-            sonar.SetAimProvider(() => AimDir); // AimDir from your cursor/provider
-            _flashlightEnabledBeforeKill = sonar.flashlightEnabled;
+            flashlight = gameObject.AddComponent<PlayerFlashlight>();
+            createdFlashlight = true;
+        }
+        if (createdFlashlight && sonar != null)
+        {
+            flashlight.obstacleMask = sonar.obstacleMask;
+            flashlight.revealableMask = sonar.revealableMask;
+            flashlight.piercingUpgrade = sonar.piercingUpgrade;
+            flashlight.autoResolvePoolsFromHub = sonar.autoResolvePoolsFromHub;
+        }
+        if (flashlight != null)
+        {
+            flashlight.SetAimProvider(() => AimDir);
+            _flashlightEnabledBeforeKill = flashlight.flashlightEnabled;
         }
 
         MoveState = new PlayerMoveState();
@@ -165,7 +185,6 @@ public class PlayerController : MonoBehaviour
 
     private void OnDisable()
     {
-        StopAimShake();
         KillDashFeel();
     }
 
@@ -205,7 +224,6 @@ public class PlayerController : MonoBehaviour
     {
         if (!ctx.performed) return;
         if (IsDead || IsDashing) return;
-        if (IsAiming) return;
         if (_dashCooldownRemaining > 0f) return;
 
         Vector2 dashDir = GetCommittedDashDirection();
@@ -225,27 +243,52 @@ public class PlayerController : MonoBehaviour
 
     public void OnPing(InputAction.CallbackContext ctx)
     {
-        // Manual sonar pulses have been retired; handler kept to consume the input action.
-    }
-
-    public void OnShoot(InputAction.CallbackContext ctx)
-    {
-        if (IsDead) return;
-        if (blopShooter == null) return;
-
-        if (ctx.started || (ctx.performed && !blopShooter.IsCharging))
+        if (ctx.canceled)
         {
-            blopShooter.BeginCharge();
-            RefreshAimShakeState();
+            _pingInputHeld = false;
             return;
         }
 
-        if (ctx.canceled)
+        bool pressedNow = false;
+        try
         {
-            blopShooter.ReleaseCharge();
-            RefreshAimShakeState();
+            pressedNow = ctx.ReadValueAsButton();
         }
+        catch
+        {
+            pressedNow = ctx.performed;
+        }
+
+        if (!pressedNow) return;
+        if (_pingInputHeld) return;
+        _pingInputHeld = true;
+        if (Time.unscaledTime - _lastPingInputTime < pingInputDebounceSeconds) return;
+        _lastPingInputTime = Time.unscaledTime;
+        if (IsDead) return;
+        if (sonar == null || !sonar.CanLaunchClickPing) return;
+        if (blopWallet == null)
+        {
+            blopWallet = GetComponent<BlopWallet>();
+            if (blopWallet == null) blopWallet = GetComponentInChildren<BlopWallet>(true);
+            if (blopWallet == null) blopWallet = GetComponentInParent<BlopWallet>();
+        }
+        if (blopWallet == null)
+        {
+            Debug.LogWarning("[PlayerController] Ping input received but no BlopWallet was found.", this);
+            return;
+        }
+        if (!blopWallet.TrySpend(pingBlopCost)) return;
+
+        sonar.TriggerClickPing();
     }
+
+    public void OnToggleFlashlight(InputAction.CallbackContext ctx)
+    {
+        if (!ctx.performed) return;
+        ToggleFlashlight();
+    }
+
+
 
     // ------------------------
     // State machine
@@ -266,13 +309,11 @@ public class PlayerController : MonoBehaviour
         if (IsDead || _isTemporarilyInvincible) return;
 
         SetMovementInputLocked(true);
-        StopAimShake();
-        blopShooter?.ReleaseCharge();
 
-        if (sonar != null)
+        if (flashlight != null)
         {
-            _flashlightEnabledBeforeKill = sonar.flashlightEnabled;
-            sonar.ForceFlashlightState(false);
+            _flashlightEnabledBeforeKill = flashlight.flashlightEnabled;
+            flashlight.ForceFlashlightState(false);
         }
         ChangeState(DeadState);
         PlayerDied?.Invoke(this);
@@ -298,11 +339,10 @@ public class PlayerController : MonoBehaviour
         transform.position = position;
         _isTemporarilyInvincible = false;
         SetMovementInputLocked(false);
-        StopAimShake();
         blopShooter?.ReleaseCharge();
 
-        if (sonar != null)
-            sonar.ForceFlashlightState(_flashlightEnabledBeforeKill);
+        if (flashlight != null)
+            flashlight.ForceFlashlightState(_flashlightEnabledBeforeKill);
 
         ChangeState(MoveState);
         PlayerRespawned?.Invoke(this);
@@ -377,46 +417,24 @@ public class PlayerController : MonoBehaviour
             visualRoot.DOKill();
     }
 
-    private void RefreshAimShakeState()
-    {
-        if (IsAiming)
-            StartAimShake();
-        else
-            StopAimShake();
-    }
-
-    private void StartAimShake()
-    {
-        if (visualRoot == null) return;
-        if (_aimShakeTween != null && _aimShakeTween.IsActive()) return;
-
-        _aimShakeTween = visualRoot.DOShakePosition(
-                duration: 0.3f,
-                strength: new Vector3(aimShakeStrength, aimShakeStrength, 0f),
-                vibrato: Mathf.Max(1, aimShakeVibrato),
-                randomness: aimShakeRandomness,
-                snapping: false,
-                fadeOut: false)
-            .SetLoops(-1, LoopType.Restart)
-            .SetEase(Ease.Linear);
-    }
-
-    private void StopAimShake()
-    {
-        if (_aimShakeTween != null && _aimShakeTween.IsActive())
-            _aimShakeTween.Kill();
-        _aimShakeTween = null;
-
-        if (visualRoot != null)
-            visualRoot.localPosition = _visualRootRestLocalPos;
-    }
-
     // UI helper
     public float DashCooldown01()
     {
         float cooldown = DashCooldown;
         if (cooldown <= 0f) return 0f;
         return Mathf.Clamp01(_dashCooldownRemaining / cooldown);
+    }
+
+    public void ToggleFlashlight()
+    {
+        if (flashlight == null)
+            flashlight = GetComponent<PlayerFlashlight>();
+        if (flashlight == null)
+            return;
+
+        bool nextState = !flashlight.flashlightEnabled;
+        flashlight.ForceFlashlightState(nextState);
+        AudioManager.PlayAttached(OnFlashlight, this.gameObject);
     }
 }
 

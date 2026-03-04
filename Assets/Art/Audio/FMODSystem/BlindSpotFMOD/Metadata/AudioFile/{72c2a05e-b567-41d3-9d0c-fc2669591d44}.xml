@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{72c2a05e-b567-41d3-9d0c-fc2669591d44}">
+		<property name="assetPath">
+			<value>Atmosphere 01.wav</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>48</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>17.5</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{8352fdc4-5895-4de3-909c-78be8fa00376}</destination>
+		</relationship>
+	</object>
+</objects>

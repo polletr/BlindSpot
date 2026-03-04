@@ -11,14 +11,13 @@ public class SquareEnemy : EnemyBase
     [SerializeField, Min(0.05f)] float waitAtPointDuration = 1.5f;
     [SerializeField, Range(0.1f, 1.5f)] float patrolSpeedFraction = 0.7f;
     [SerializeField, Min(1)] int patrolGenerationAttempts = 14;
-    [SerializeField] float roomBoundsInset = 0.6f;
+    [SerializeField, Min(0f)] float roomBoundsInset = 0.6f;
     [SerializeField] LayerMask patrolBlockMask;
 
     [Header("Chase Steering")]
     [SerializeField, Range(0f, 0.5f)] float chaseDirectionSmoothTime = 0.14f;
     [SerializeField, Range(1f, 4f)] float chaseSlowDistanceMultiplier = 1.8f;
     [SerializeField, Range(0f, 1f)] float minChaseSpeedFraction = 0.35f;
-    [SerializeField, Range(0f, 0.3f)] float chaseVelocitySmoothTime = 0.08f;
 
     public SquareIdleState IdleState { get; private set; }
     public SquarePatrolState PatrolState { get; private set; }
@@ -30,7 +29,6 @@ public class SquareEnemy : EnemyBase
 
     Vector2 _smoothedChaseDir;
     Vector2 _chaseDirVelocity;
-    Vector2 _chaseVelocityRef;
     Vector2 _lastMoveIntent;
 
     public bool HasPatrolRoute => _patrolPointCount == _patrolPoints.Length;
@@ -89,7 +87,6 @@ public class SquareEnemy : EnemyBase
         {
             if (tip == null || tip == transform)
                 continue;
-
             if (!tip.name.ToLower().Contains("tip"))
                 continue;
 
@@ -142,16 +139,20 @@ public class SquareEnemy : EnemyBase
     protected override void Awake()
     {
         base.Awake();
+
         _smoothedChaseDir = ForwardDir;
+
         IdleState = new SquareIdleState();
         PatrolState = new SquarePatrolState();
         ChaseState = new SquareChaseState();
+
         ChangeState(IdleState);
     }
 
     protected override void AggroOnHit()
     {
-        if (IsDead || IsPlayerDead) return;
+        if (IsDead || IsPlayerDead)
+            return;
         if (HasPlayer)
             ChangeState(ChaseState);
     }
@@ -182,11 +183,12 @@ public class SquareEnemy : EnemyBase
         float maxExtent = Mathf.Max(minExtent, patrolMaxHalfExtent);
 
         Vector2 center = transform.position;
-        Bounds bounds = new Bounds(new Vector3(center.x, center.y, 0f), new Vector3(maxExtent * 4f, maxExtent * 4f, 4f));
+        Bounds bounds = ResolvePatrolBounds(center, maxExtent);
         bool hasBounds = bounds.size.sqrMagnitude > 0.0001f;
 
         Vector2[] tempPoints = new Vector2[_patrolPoints.Length];
         int attempts = Mathf.Max(1, patrolGenerationAttempts);
+
         for (int attempt = 0; attempt < attempts; attempt++)
         {
             float halfX = Random.Range(minExtent, maxExtent);
@@ -202,40 +204,86 @@ public class SquareEnemy : EnemyBase
             bool valid = true;
             for (int i = 0; i < tempPoints.Length; i++)
             {
-                Vector2 world = center + (Vector2)(rotation * tempPoints[i]);
-                if (hasBounds && !PointInsideBounds(bounds, world))
+                Vector2 desired = center + (Vector2)(rotation * tempPoints[i]);
+                if (hasBounds && !PointInsideBounds(bounds, desired))
                 {
                     valid = false;
                     break;
                 }
 
-                if (IsPointBlocked(world))
+                if (!TryGetReachablePatrolPoint(desired, out Vector2 reachablePoint))
                 {
                     valid = false;
                     break;
                 }
 
-                tempPoints[i] = world;
+                if (IsPointBlocked(reachablePoint))
+                {
+                    valid = false;
+                    break;
+                }
+
+                tempPoints[i] = reachablePoint;
             }
 
-            if (valid)
-            {
-                for (int i = 0; i < _patrolPoints.Length; i++)
-                    _patrolPoints[i] = tempPoints[i];
+            if (!valid)
+                continue;
 
-                _patrolPointCount = _patrolPoints.Length;
-                _currentPatrolIndex = 0;
-                return true;
-            }
+            if (!ArePatrolLinksReachable(tempPoints))
+                continue;
+
+            for (int i = 0; i < _patrolPoints.Length; i++)
+                _patrolPoints[i] = tempPoints[i];
+
+            _patrolPointCount = _patrolPoints.Length;
+            _currentPatrolIndex = 0;
+            return true;
         }
 
         return false;
+    }
+
+    bool TryGetReachablePatrolPoint(Vector2 desired, out Vector2 reachablePoint)
+    {
+        reachablePoint = desired;
+
+        if (!TrySampleNavMeshPosition(desired, out Vector3 sampled))
+            return false;
+
+        reachablePoint = sampled;
+
+        if (!HasCompletePath((Vector2)transform.position, reachablePoint))
+            return false;
+
+        return true;
+    }
+
+    bool ArePatrolLinksReachable(Vector2[] points)
+    {
+        for (int i = 0; i < points.Length; i++)
+        {
+            int next = (i + 1) % points.Length;
+            if (!HasCompletePath(points[i], points[next]))
+                return false;
+        }
+
+        return true;
+    }
+
+    Bounds ResolvePatrolBounds(Vector2 center, float maxExtent)
+    {
+        if (RoomGenerator.HasInstance && RoomGenerator.Instance.RoomBounds.size.sqrMagnitude > 0.0001f)
+            return RoomGenerator.Instance.RoomBounds;
+
+        float fallbackSize = Mathf.Max(2f, maxExtent * 4f);
+        return new Bounds(new Vector3(center.x, center.y, 0f), new Vector3(fallbackSize, fallbackSize, 0f));
     }
 
     bool PointInsideBounds(Bounds bounds, Vector2 point)
     {
         Vector3 min = bounds.min + new Vector3(roomBoundsInset, roomBoundsInset, 0f);
         Vector3 max = bounds.max - new Vector3(roomBoundsInset, roomBoundsInset, 0f);
+
         if (min.x > max.x || min.y > max.y)
             return true;
 
@@ -246,11 +294,33 @@ public class SquareEnemy : EnemyBase
     {
         if (patrolPointClearanceRadius <= 0f)
             return false;
-
         if (patrolBlockMask.value == 0)
             return false;
 
         return Physics2D.OverlapCircle(point, patrolPointClearanceRadius, patrolBlockMask) != null;
+    }
+
+    public bool EnsureReachableCurrentPatrolPoint()
+    {
+        if (!HasPatrolRoute)
+            return false;
+
+        if (CanReachPosition(CurrentPatrolTarget))
+            return true;
+
+        for (int i = 0; i < _patrolPointCount; i++)
+        {
+            int candidateIndex = (_currentPatrolIndex + i + 1) % _patrolPointCount;
+            if (!CanReachPosition(_patrolPoints[candidateIndex]))
+                continue;
+
+            _currentPatrolIndex = candidateIndex;
+            InvalidateNavPath();
+            return true;
+        }
+
+        ResetPatrolRoute();
+        return EnsurePatrolRoute();
     }
 
     public void AdvanceToNextPatrolPoint()
@@ -272,22 +342,19 @@ public class SquareEnemy : EnemyBase
         if (!HasPatrolRoute)
             return;
 
-        Vector2 dir = GetNavMeshDirection(CurrentPatrolTarget);
-        if (dir.sqrMagnitude < 0.0001f)
-        {
+        Vector2 moveDir = GetNavMeshDirection(CurrentPatrolTarget);
+        if (moveDir.sqrMagnitude > 0.0001f)
+            SetMoveIntent(moveDir);
+        else
             ClearMoveIntent();
-            return;
-        }
 
-        SetMoveIntent(dir);
-        MoveInDirection(dir, PatrolSpeedMultiplier);
+        MoveToPosition(CurrentPatrolTarget, PatrolSpeedMultiplier);
     }
 
     public void ResetChaseSteering()
     {
         _smoothedChaseDir = ForwardDir;
         _chaseDirVelocity = Vector2.zero;
-        _chaseVelocityRef = Vector2.zero;
     }
 
     public Vector2 GetSmoothedChaseDirection()
@@ -316,9 +383,11 @@ public class SquareEnemy : EnemyBase
                 chaseDirectionSmoothTime,
                 Mathf.Infinity,
                 Time.fixedDeltaTime);
+
             if (_smoothedChaseDir.sqrMagnitude < 0.0001f)
                 _smoothedChaseDir = desired;
         }
+
         return _smoothedChaseDir.normalized;
     }
 
@@ -356,40 +425,25 @@ public class SquareEnemy : EnemyBase
     public void ApplyChaseMove(Vector2 dir, float speedFraction)
     {
         float clampedFraction = Mathf.Clamp01(speedFraction);
-        Vector2 desiredVelocity = Vector2.zero;
-        if (dir.sqrMagnitude >= 0.0001f && clampedFraction > 0f)
-        {
-            SetMoveIntent(dir);
-            desiredVelocity = dir.normalized * (CurrentMoveSpeed * chaseSpeedMultiplier * clampedFraction);
-        }
-        else
+        if (clampedFraction <= 0f || !HasPlayer)
         {
             ClearMoveIntent();
-        }
-        SmoothChaseVelocity(desiredVelocity);
-    }
-
-    void SmoothChaseVelocity(Vector2 desiredVelocity)
-    {
-        if (chaseVelocitySmoothTime <= 0f)
-        {
-            RB.linearVelocity = desiredVelocity;
-            _chaseVelocityRef = Vector2.zero;
+            StopMove();
             return;
         }
 
-        RB.linearVelocity = Vector2.SmoothDamp(
-            RB.linearVelocity,
-            desiredVelocity,
-            ref _chaseVelocityRef,
-            chaseVelocitySmoothTime,
-            Mathf.Infinity,
-            Time.fixedDeltaTime);
+        if (dir.sqrMagnitude > 0.0001f)
+            SetMoveIntent(dir);
+        else
+            SetMoveIntent(DirToPlayer);
+
+        MoveToPlayer(chaseSpeedMultiplier * clampedFraction);
     }
 
     protected override void OnDrawGizmosSelected()
     {
         base.OnDrawGizmosSelected();
+
         if (!HasPatrolRoute)
             return;
 
@@ -403,9 +457,3 @@ public class SquareEnemy : EnemyBase
         }
     }
 }
-
-
-
-
-
-

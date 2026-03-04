@@ -1,21 +1,21 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
-[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(NavMeshAgent))]
 public abstract class EnemyBase : MonoBehaviour
 {
-    const string WallsLayerName = "Walls";
-    const string ObstaclesLayerName = "Obstacles";
-
     [Header("Refs")]
-    [SerializeField] protected Transform player; // assign or auto-find
-    public Rigidbody2D RB { get; private set; }
+    [SerializeField] protected Transform player;
+    public NavMeshAgent Agent { get; private set; }
     protected PlayerController TargetPlayerController { get; private set; }
 
     UpgradeManager upgradeManager;
-    private EnemyVisibility _enemyVisibility;
+    EnemyVisibility _enemyVisibility;
+    Rigidbody2D _rb2D;
+
     protected UpgradeManager UpgradeMgr
     {
         get
@@ -41,17 +41,15 @@ public abstract class EnemyBase : MonoBehaviour
     public float chaseCommitTime = 0.55f;
     public float repositionTime = 0.35f;
     public float stopDistance = 0.65f;
- 
+
     [Header("Navigation")]
-    [SerializeField, Min(0.05f)] float navMeshRepathInterval = 0.25f;
-    [SerializeField, Min(0.05f)] float navMeshRepathDistance = 0.4f;
-    [SerializeField, Min(0.1f)] float gridCellSize = 0.5f;
+    [SerializeField, Min(0.05f)] float navMeshRepathInterval = 0.2f;
+    [SerializeField, Min(0.05f)] float navMeshRepathDistance = 0.35f;
     [SerializeField, Min(0.01f)] float navMeshCornerTolerance = 0.1f;
-    [SerializeField, Min(0.5f)] float fallbackBoundsSize = 40f;
-    [SerializeField] LayerMask pathBlockMask;
- 
-
-
+    [SerializeField, Min(0.1f)] float navMeshSampleDistance = 1f;
+    [SerializeField, Min(0.1f)] float navMeshSnapDistance = 2f;
+    [SerializeField, Min(0.05f)] float navMeshRecoverInterval = 0.3f;
+    [SerializeField] bool updateNavAgentEveryFrame = true;
 
     [Header("Tips")]
     [Tooltip("Assign all tip transforms (child objects).")]
@@ -69,7 +67,6 @@ public abstract class EnemyBase : MonoBehaviour
     protected float _nextTipSwitchTime;
     public Transform ActiveTip { get; protected set; }
 
-
     [Header("Perception")]
     public float detectRadius = 6f;
     public float loseRadius = 9f;
@@ -79,50 +76,60 @@ public abstract class EnemyBase : MonoBehaviour
     public bool drawGizmos = true;
 
     [Header("Combat")]
-    [SerializeField, Min(1)] private int maxHealth = 3;
-    [SerializeField, Min(0f)] private float hitRevealDuration = 0.9f;
-    [SerializeField, Tooltip("Delay before destroying corpses. Set negative to keep them around.")] private float deathCleanupDelay = 3f;
-    [SerializeField] private Animator deathAnimatorOverride;
-    [SerializeField] private string deathTriggerName = "Die";
+    [SerializeField, Min(1)] int maxHealth = 3;
+    [SerializeField, Min(0f)] float hitRevealDuration = 0.9f;
+    [SerializeField, Tooltip("Delay before destroying corpses. Set negative to keep them around.")] float deathCleanupDelay = 3f;
+    [SerializeField] Animator deathAnimatorOverride;
+    [SerializeField] string deathTriggerName = "Die";
 
     [Header("Death VFX")]
-    [SerializeField] private ParticleSystem deathVfx;
-    [SerializeField] private bool disableSpritesOnDeath = true;
-    [SerializeField] private List<SpriteRenderer> spritesToDisable = new();
+    [SerializeField] ParticleSystem deathVfx;
+    [SerializeField] bool disableSpritesOnDeath = true;
+    [SerializeField] List<SpriteRenderer> spritesToDisable = new();
 
     public int CurrentHealth { get; private set; }
     public bool IsDead { get; private set; }
 
     public event Action<EnemyBase> EnemyDied;
 
-    private Collider2D[] _cachedColliders;
+    Collider2D[] _cachedColliders;
     Coroutine _deathCleanupRoutine;
-    readonly List<Vector2> _gridPathPoints = new();
+    readonly List<Vector3> _navPathCorners = new();
     Vector2 _navDestination;
     int _navCornerIndex;
     float _nextNavPathUpdateTime;
     bool _navPathValid;
     bool _hasNavDestination;
     float _forcedAggroUntil;
- 
+    float _nextNavRecoverTime;
 
     protected IEnemyState currentState;
     protected bool IsTargetPlayerDead => TargetPlayerController != null && TargetPlayerController.IsDead;
 
     protected virtual void Awake()
     {
-        EnsurePathBlockMask();
+        Agent = GetComponent<NavMeshAgent>();
+        ConfigureNavAgent();
+        TrySnapAgentToNavMesh(force: true);
 
-        RB = GetComponent<Rigidbody2D>();
-        RB.gravityScale = 0f;
-        RB.freezeRotation = true;
+        if (TryGetComponent(out Rigidbody2D rb2D))
+        {
+            _rb2D = rb2D;
+            _rb2D.linearVelocity = Vector2.zero;
+            _rb2D.angularVelocity = 0f;
+            _rb2D.bodyType = RigidbodyType2D.Kinematic;
+            _rb2D.freezeRotation = true;
+        }
 
         if (player == null)
         {
             var pc = FindFirstObjectByType<PlayerController>();
-            if (pc != null) player = pc.transform;
+            if (pc != null)
+                player = pc.transform;
         }
+
         CachePlayerControllerReference();
+
         if (TryGetComponent(out EnemyVisibility enemyVis))
         {
             _enemyVisibility = enemyVis;
@@ -132,10 +139,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (tips == null || tips.Count == 0)
         {
             foreach (EnemyTipKill t in GetComponentsInChildren<EnemyTipKill>())
-            {
                 tips.Add(t.transform);
-            }    
-
         }
 
         PickActiveTip(force: true);
@@ -143,13 +147,17 @@ public abstract class EnemyBase : MonoBehaviour
         _cachedColliders = GetComponentsInChildren<Collider2D>(includeInactive: true);
         CurrentHealth = Mathf.Max(1, maxHealth);
         IsDead = false;
+
         if (disableSpritesOnDeath)
             SetSpritesVisible(true);
     }
 
     void OnValidate()
     {
-        EnsurePathBlockMask();
+        if (Agent == null)
+            Agent = GetComponent<NavMeshAgent>();
+
+        ConfigureNavAgent();
     }
 
     protected virtual void OnEnable()
@@ -166,30 +174,52 @@ public abstract class EnemyBase : MonoBehaviour
     protected virtual void ResetDeathState()
     {
         IsDead = false;
+
         if (disableSpritesOnDeath)
             SetSpritesVisible(true);
+
         CurrentHealth = Mathf.Clamp(CurrentHealth <= 0 ? maxHealth : CurrentHealth, 1, maxHealth);
+
         EnableAllColliders(true);
         InvalidateNavPath();
-        if (RB != null)
+
+        if (_rb2D != null)
         {
-            RB.linearVelocity = Vector2.zero;
-       }
+            _rb2D.linearVelocity = Vector2.zero;
+            _rb2D.angularVelocity = 0f;
+        }
+
+        TrySnapAgentToNavMesh(force: true);
+        if (CanUseNavAgent())
+        {
+            Agent.Warp(transform.position);
+            Agent.isStopped = false;
+        }
     }
 
     protected virtual void Update()
     {
-        if (IsDead) return;
+        if (IsDead)
+            return;
+
+        if (!CanUseNavAgent() && Time.time >= _nextNavRecoverTime)
+        {
+            TrySnapAgentToNavMesh(force: true);
+            _nextNavRecoverTime = Time.time + Mathf.Max(0.05f, navMeshRecoverInterval);
+        }
+
+        if (updateNavAgentEveryFrame)
+            SyncNavAgentSettings();
 
         currentState?.Tick(this);
 
-        if (!HasPlayer) return;
+        if (!HasPlayer)
+            return;
 
         UpdateActiveTip();
 
         if (ShouldRotateTowardPlayer)
             RotateSoActiveTipFacesPlayer();
-
     }
 
     protected virtual bool ShouldRotateTowardPlayer => true;
@@ -198,8 +228,7 @@ public abstract class EnemyBase : MonoBehaviour
     {
         if (IsDead)
         {
-            if (RB != null)
-                RB.linearVelocity = Vector2.zero;
+            StopMove();
             return;
         }
 
@@ -214,7 +243,9 @@ public abstract class EnemyBase : MonoBehaviour
 
     public void ChangeState(IEnemyState next)
     {
-        if (next == null || next == currentState) return;
+        if (next == null || next == currentState)
+            return;
+
         currentState?.Exit(this);
         currentState = next;
         currentState.Enter(this);
@@ -226,7 +257,8 @@ public abstract class EnemyBase : MonoBehaviour
     {
         get
         {
-            if (!HasPlayer) return float.PositiveInfinity;
+            if (!HasPlayer)
+                return float.PositiveInfinity;
             return Vector2.Distance(transform.position, player.position);
         }
     }
@@ -235,9 +267,13 @@ public abstract class EnemyBase : MonoBehaviour
     {
         get
         {
-            if (!HasPlayer) return Vector2.right;
+            if (!HasPlayer)
+                return Vector2.right;
+
             Vector2 d = (Vector2)player.position - (Vector2)transform.position;
-            if (d.sqrMagnitude < 0.0001f) return Vector2.right;
+            if (d.sqrMagnitude < 0.0001f)
+                return Vector2.right;
+
             return d.normalized;
         }
     }
@@ -246,27 +282,64 @@ public abstract class EnemyBase : MonoBehaviour
     public bool PlayerBeyondLoseRadius() => !HasPlayer || DistToPlayer >= CurrentLoseRadius;
     public bool IsForcedAggroActive => Time.time < _forcedAggroUntil;
 
-    // Basic “accelerated velocity” steering (feels consistent with your player)
+    public bool CanUseNavAgent() => Agent != null && Agent.enabled && Agent.isOnNavMesh;
+
+    public void MoveToPosition(Vector2 destination, float speedMultiplier = 1f, bool forceRepath = false)
+    {
+        if (IsDead)
+            return;
+
+        if (!TrySampleNavMeshPosition(destination, out Vector3 sampledDestination))
+        {
+            StopMove();
+            return;
+        }
+
+        SetNavDestination(sampledDestination, speedMultiplier, forceRepath);
+    }
+
+    public void MoveToPlayer(float speedMultiplier = 1f, bool forceRepath = false)
+    {
+        if (!HasPlayer)
+        {
+            StopMove();
+            return;
+        }
+
+        MoveToPosition(player.position, speedMultiplier, forceRepath);
+    }
+
     public void MoveInDirection(Vector2 dir, float speedMultiplier = 1f)
     {
-        if (IsDead) return;
-        if (dir.sqrMagnitude < 0.0001f) return;
+        if (dir.sqrMagnitude < 0.0001f)
+        {
+            StopMove();
+            return;
+        }
 
-        Vector2 targetVel = dir.normalized * (CurrentMoveSpeed * speedMultiplier);
-        Vector2 newVel = Vector2.MoveTowards(RB.linearVelocity, targetVel, acceleration * Time.fixedDeltaTime);
-        RB.linearVelocity = newVel;
+        Vector2 destination = (Vector2)transform.position + dir.normalized * Mathf.Max(1f, CurrentMoveSpeed * navMeshRepathInterval);
+        MoveToPosition(destination, speedMultiplier, forceRepath: true);
     }
 
-    public void StopMove(float decel = 40f)
+    public void StopMove(float decel = 0f)
     {
-        if (IsDead) return;
-        RB.linearVelocity = Vector2.MoveTowards(RB.linearVelocity, Vector2.zero, decel * Time.fixedDeltaTime);
-    }
+        if (!CanUseNavAgent())
+        {
+            if (_rb2D != null)
+                _rb2D.linearVelocity = Vector2.zero;
+            return;
+        }
 
+        Agent.isStopped = true;
+        if (Agent.hasPath)
+            Agent.ResetPath();
+        Agent.velocity = Vector3.zero;
+    }
 
     public virtual void TakeDamage(int amount)
     {
-        if (IsDead) return;
+        if (IsDead)
+            return;
 
         amount = Mathf.Max(1, amount);
         CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
@@ -279,13 +352,8 @@ public abstract class EnemyBase : MonoBehaviour
             OnDamaged();
     }
 
-    protected virtual void OnDamaged()
-    {
-    }
-
-    protected virtual void AggroOnHit()
-    {
-    }
+    protected virtual void OnDamaged() { }
+    protected virtual void AggroOnHit() { }
 
     void HandleRevealAndAggroOnHit()
     {
@@ -317,7 +385,8 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void HandleDeath()
     {
-        if (IsDead) return;
+        if (IsDead)
+            return;
 
         IsDead = true;
         CurrentHealth = 0;
@@ -325,10 +394,7 @@ public abstract class EnemyBase : MonoBehaviour
         currentState?.Exit(this);
         currentState = null;
 
-        if (RB != null)
-        {
-            RB.linearVelocity = Vector2.zero;
-        }
+        StopMove();
 
         EnableAllColliders(false);
 
@@ -353,21 +419,22 @@ public abstract class EnemyBase : MonoBehaviour
         }
     }
 
-    private Animator ResolveDeathAnimator()
+    Animator ResolveDeathAnimator()
     {
         if (deathAnimatorOverride != null)
             return deathAnimatorOverride;
         return GetComponentInChildren<Animator>();
     }
 
-    private void EnableAllColliders(bool enabled)
+    void EnableAllColliders(bool enabled)
     {
         if (_cachedColliders == null || _cachedColliders.Length == 0)
             _cachedColliders = GetComponentsInChildren<Collider2D>(includeInactive: true);
 
         foreach (var col in _cachedColliders)
         {
-            if (col == null) continue;
+            if (col == null)
+                continue;
             col.enabled = enabled;
         }
     }
@@ -387,7 +454,8 @@ public abstract class EnemyBase : MonoBehaviour
 
         foreach (var sr in spritesToDisable)
         {
-            if (sr == null) continue;
+            if (sr == null)
+                continue;
             sr.enabled = visible;
         }
     }
@@ -410,18 +478,18 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void OnDrawGizmosSelected()
     {
-        if (!drawGizmos) return;
+        if (!drawGizmos)
+            return;
+
         float detect = Application.isPlaying ? CurrentDetectRadius : detectRadius;
         float lose = Application.isPlaying ? CurrentLoseRadius : loseRadius;
+
         Gizmos.color = new Color(1f, 1f, 0f, 0.25f);
         Gizmos.DrawWireSphere(transform.position, detect);
+
         Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.25f);
         Gizmos.DrawWireSphere(transform.position, lose);
     }
-
-    // -----------------------------
-    // Tip logic
-    // -----------------------------
 
     protected virtual void UpdateActiveTip()
     {
@@ -433,10 +501,10 @@ public abstract class EnemyBase : MonoBehaviour
 
     public void PickActiveTip(bool force)
     {
-        if (!HasPlayer || tips.Count == 0) return;
+        if (!HasPlayer || tips.Count == 0)
+            return;
 
         Vector2 p = player.position;
-
         Transform best = ActiveTip;
         float bestDist = ActiveTip != null
             ? Vector2.Distance(ActiveTip.position, p)
@@ -444,8 +512,10 @@ public abstract class EnemyBase : MonoBehaviour
 
         foreach (var t in tips)
         {
-            if (t == null || t == transform) continue;
-            if (!t.name.ToLower().Contains("tip")) continue;
+            if (t == null || t == transform)
+                continue;
+            if (!t.name.ToLower().Contains("tip"))
+                continue;
 
             float d = Vector2.Distance(t.position, p);
             if (d < bestDist)
@@ -455,7 +525,8 @@ public abstract class EnemyBase : MonoBehaviour
             }
         }
 
-        if (best == null) return;
+        if (best == null)
+            return;
 
         if (force)
         {
@@ -464,8 +535,14 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
-        if (Time.time < _nextTipSwitchTime) return;
-        if (ActiveTip == null) { ActiveTip = best; return; }
+        if (Time.time < _nextTipSwitchTime)
+            return;
+
+        if (ActiveTip == null)
+        {
+            ActiveTip = best;
+            return;
+        }
 
         float currentDist = Vector2.Distance(ActiveTip.position, p);
         if (best != ActiveTip && bestDist <= currentDist - tipSwitchBetterBy)
@@ -487,8 +564,10 @@ public abstract class EnemyBase : MonoBehaviour
     {
         player = controller != null ? controller.transform : null;
         CachePlayerControllerReference();
+
         if (_enemyVisibility != null)
             _enemyVisibility.player = player;
+
         InvalidateNavPath();
     }
 
@@ -542,16 +621,13 @@ public abstract class EnemyBase : MonoBehaviour
         _nextTipSwitchTime = Time.time + duration;
     }
 
-    // -----------------------------
-    // Navigation
-    // -----------------------------
-
     public void InvalidateNavPath()
     {
         _navPathValid = false;
         _hasNavDestination = false;
         _navCornerIndex = 0;
         _nextNavPathUpdateTime = 0f;
+        _navPathCorners.Clear();
     }
 
     protected Vector2 GetNavMeshDirection(Vector2 destination, bool forceRepath = false)
@@ -568,7 +644,50 @@ public abstract class EnemyBase : MonoBehaviour
         if (toCorner.sqrMagnitude < 0.0001f)
             return fallback;
 
-        return toCorner;
+        return toCorner.normalized;
+    }
+
+    protected bool TrySampleNavMeshPosition(Vector2 desiredPosition, out Vector3 sampledPosition)
+    {
+        sampledPosition = new Vector3(desiredPosition.x, desiredPosition.y, transform.position.z);
+
+        int areaMask = CanUseNavAgent() ? Agent.areaMask : NavMesh.AllAreas;
+        float sampleDistance = Mathf.Max(0.1f, navMeshSampleDistance);
+
+        if (NavMesh.SamplePosition(sampledPosition, out NavMeshHit hit, sampleDistance, areaMask))
+        {
+            sampledPosition = new Vector3(hit.position.x, hit.position.y, transform.position.z);
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool CanReachPosition(Vector2 destination)
+    {
+        if (!TrySampleNavMeshPosition(destination, out Vector3 sampledDestination))
+            return false;
+
+        return HasCompletePath(transform.position, sampledDestination);
+    }
+
+    protected bool HasCompletePath(Vector2 from, Vector2 to)
+    {
+        if (!TrySampleNavMeshPosition(from, out Vector3 sampledFrom))
+            return false;
+        if (!TrySampleNavMeshPosition(to, out Vector3 sampledTo))
+            return false;
+
+        return HasCompletePath(sampledFrom, sampledTo);
+    }
+
+    bool HasCompletePath(Vector3 from, Vector3 to)
+    {
+        NavMeshPath path = new NavMeshPath();
+        if (!NavMesh.CalculatePath(from, to, NavMesh.AllAreas, path))
+            return false;
+
+        return path.status == NavMeshPathStatus.PathComplete && path.corners != null && path.corners.Length >= 2;
     }
 
     bool EnsureNavPath(Vector2 destination, bool forceRepath)
@@ -582,302 +701,143 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (!needsRepath)
             return true;
-        if (TryBuildGridPath((Vector2)transform.position, destination, _gridPathPoints))
-        {
-            _navPathValid = true;
-            _hasNavDestination = true;
-            _navDestination = destination;
-            _navCornerIndex = 0;
-        }
-        else
-        {
-            _navPathValid = false;
-            _hasNavDestination = false;
-            _gridPathPoints.Clear();
-        }
 
-        float interval = Mathf.Max(0.01f, navMeshRepathInterval);
-        _nextNavPathUpdateTime = Time.time + interval;
+        _navPathValid = TryBuildNavMeshPath(destination, _navPathCorners);
+        _hasNavDestination = _navPathValid;
+        _navDestination = destination;
+        _navCornerIndex = 0;
+        _nextNavPathUpdateTime = Time.time + Mathf.Max(0.01f, navMeshRepathInterval);
+
+        if (!_navPathValid)
+            _navPathCorners.Clear();
+
         return _navPathValid;
+    }
+
+    bool TryBuildNavMeshPath(Vector2 destination, List<Vector3> outCorners)
+    {
+        outCorners.Clear();
+
+        if (!TrySampleNavMeshPosition(transform.position, out Vector3 sampledStart))
+            return false;
+        if (!TrySampleNavMeshPosition(destination, out Vector3 sampledDestination))
+            return false;
+
+        NavMeshPath path = new NavMeshPath();
+        if (!NavMesh.CalculatePath(sampledStart, sampledDestination, NavMesh.AllAreas, path))
+            return false;
+
+        if (path.status != NavMeshPathStatus.PathComplete || path.corners == null || path.corners.Length < 2)
+            return false;
+
+        outCorners.AddRange(path.corners);
+        return outCorners.Count > 1;
     }
 
     bool TryGetCurrentCorner(Vector2 currentPosition, out Vector2 corner)
     {
         corner = Vector2.zero;
-        if (!_navPathValid || _gridPathPoints.Count == 0)
+        if (!_navPathValid || _navPathCorners.Count <= 1)
             return false;
 
         float tolerance = Mathf.Max(0.005f, navMeshCornerTolerance);
-        while (_navCornerIndex < _gridPathPoints.Count)
+        while (_navCornerIndex < _navPathCorners.Count - 1)
         {
-            corner = _gridPathPoints[_navCornerIndex];
-            float dist = Vector2.Distance(currentPosition, corner);
+            Vector2 candidate = _navPathCorners[_navCornerIndex + 1];
+            float dist = Vector2.Distance(currentPosition, candidate);
             if (dist <= tolerance)
             {
-                if (_navCornerIndex == _gridPathPoints.Count - 1)
-                    return false;
-
                 _navCornerIndex++;
                 continue;
             }
 
-            int lookAhead = _navCornerIndex;
-            for (int i = _navCornerIndex + 1; i < _gridPathPoints.Count; i++)
-            {
-                if (!HasPathLineOfSight(currentPosition, _gridPathPoints[i]))
-                    break;
-
-                lookAhead = i;
-            }
-
-            corner = _gridPathPoints[lookAhead];
-            _navCornerIndex = lookAhead;
+            corner = candidate;
             return true;
         }
 
         return false;
     }
 
-    bool HasPathLineOfSight(Vector2 from, Vector2 to)
+    void SetNavDestination(Vector3 sampledDestination, float speedMultiplier, bool forceRepath)
     {
-        if (pathBlockMask.value == 0)
+        if (!CanUseNavAgent() && !TrySnapAgentToNavMesh(force: true))
+            return;
+
+        SyncNavAgentSettings();
+
+        float speed = Mathf.Max(0f, CurrentMoveSpeed * speedMultiplier);
+        Agent.speed = speed;
+        Agent.isStopped = speed <= 0.0001f;
+
+        if (Agent.isStopped)
+            return;
+
+        float repathDistance = Mathf.Max(0.01f, navMeshRepathDistance);
+        bool shouldSetDestination = forceRepath
+            || !_hasNavDestination
+            || ((Vector2)sampledDestination - _navDestination).sqrMagnitude >= repathDistance * repathDistance
+            || Time.time >= _nextNavPathUpdateTime;
+
+        if (!shouldSetDestination)
+            return;
+
+        if (Agent.SetDestination(sampledDestination))
+        {
+            _hasNavDestination = true;
+            _navDestination = sampledDestination;
+            _nextNavPathUpdateTime = Time.time + Mathf.Max(0.01f, navMeshRepathInterval);
+        }
+    }
+
+    bool TrySnapAgentToNavMesh(bool force)
+    {
+        if (Agent == null || !Agent.enabled)
+            return false;
+
+        if (!force && Agent.isOnNavMesh)
             return true;
 
-        RaycastHit2D hit = Physics2D.Linecast(from, to, pathBlockMask);
-        return hit.collider == null;
-    }
+        Vector3 queryPosition = transform.position;
+        float sampleDistance = Mathf.Max(0.1f, navMeshSnapDistance);
+        int areaMask = Agent.areaMask != 0 ? Agent.areaMask : NavMesh.AllAreas;
 
-    bool TryBuildGridPath(Vector2 startWorld, Vector2 goalWorld, List<Vector2> outPath)
-    {
-        outPath.Clear();
-
-        float cell = Mathf.Max(0.1f, gridCellSize);
-        float halfCell = cell * 0.5f;
-        float blockProbeRadius = Mathf.Max(0.05f, cell * 0.35f);
-
-        Bounds bounds = ResolvePathBounds(startWorld, goalWorld, cell);
-        Vector2 min = bounds.min;
-        Vector2 max = bounds.max;
-
-        int width = Mathf.Max(2, Mathf.CeilToInt((max.x - min.x) / cell));
-        int height = Mathf.Max(2, Mathf.CeilToInt((max.y - min.y) / cell));
-        int count = width * height;
-        if (count <= 0 || count > 262144)
+        if (!NavMesh.SamplePosition(queryPosition, out NavMeshHit hit, sampleDistance, areaMask))
             return false;
 
-        bool[] blocked = new bool[count];
-        for (int y = 0; y < height; y++)
-        {
-            float wy = min.y + y * cell + halfCell;
-            for (int x = 0; x < width; x++)
-            {
-                float wx = min.x + x * cell + halfCell;
-                int idx = y * width + x;
-                blocked[idx] = pathBlockMask.value != 0
-                    && Physics2D.OverlapCircle(new Vector2(wx, wy), blockProbeRadius, pathBlockMask) != null;
-            }
-        }
+        Vector3 snapped = new Vector3(hit.position.x, hit.position.y, transform.position.z);
+        transform.position = snapped;
 
-        int sx = Mathf.Clamp(Mathf.FloorToInt((startWorld.x - min.x) / cell), 0, width - 1);
-        int sy = Mathf.Clamp(Mathf.FloorToInt((startWorld.y - min.y) / cell), 0, height - 1);
-        int gx = Mathf.Clamp(Mathf.FloorToInt((goalWorld.x - min.x) / cell), 0, width - 1);
-        int gy = Mathf.Clamp(Mathf.FloorToInt((goalWorld.y - min.y) / cell), 0, height - 1);
+        if (_rb2D != null)
+            _rb2D.position = new Vector2(snapped.x, snapped.y);
 
-        if (!TryFindNearestWalkableCell(sx, sy, width, height, blocked, out sx, out sy))
-            return false;
-        if (!TryFindNearestWalkableCell(gx, gy, width, height, blocked, out gx, out gy))
+        if (!Agent.Warp(snapped))
             return false;
 
-        int start = sy * width + sx;
-        int goal = gy * width + gx;
-        if (start == goal)
-            return false;
-
-        float[] gScore = new float[count];
-        float[] fScore = new float[count];
-        int[] cameFrom = new int[count];
-        bool[] closed = new bool[count];
-        for (int i = 0; i < count; i++)
-        {
-            gScore[i] = float.PositiveInfinity;
-            fScore[i] = float.PositiveInfinity;
-            cameFrom[i] = -1;
-        }
-
-        List<int> open = new List<int>(128);
-        gScore[start] = 0f;
-        fScore[start] = Heuristic(start, goal, width);
-        open.Add(start);
-
-        int[] dx = { -1, 0, 1, -1, 1, -1, 0, 1 };
-        int[] dy = { -1, -1, -1, 0, 0, 1, 1, 1 };
-
-        while (open.Count > 0)
-        {
-            int bestIdx = 0;
-            int current = open[0];
-            float bestF = fScore[current];
-            for (int i = 1; i < open.Count; i++)
-            {
-                int node = open[i];
-                float f = fScore[node];
-                if (f < bestF)
-                {
-                    bestF = f;
-                    bestIdx = i;
-                    current = node;
-                }
-            }
-
-            open.RemoveAt(bestIdx);
-            if (current == goal)
-            {
-                ReconstructPath(current, cameFrom, width, min, cell, halfCell, outPath);
-                return outPath.Count > 0;
-            }
-
-            closed[current] = true;
-            int cx = current % width;
-            int cy = current / width;
-
-            for (int dir = 0; dir < 8; dir++)
-            {
-                int nx = cx + dx[dir];
-                int ny = cy + dy[dir];
-                if (nx < 0 || nx >= width || ny < 0 || ny >= height)
-                    continue;
-
-                int neighbor = ny * width + nx;
-                if (closed[neighbor] || blocked[neighbor])
-                    continue;
-
-                if (dx[dir] != 0 && dy[dir] != 0)
-                {
-                    int sideA = cy * width + nx;
-                    int sideB = ny * width + cx;
-                    if (blocked[sideA] || blocked[sideB])
-                        continue;
-                }
-
-                float stepCost = (dx[dir] == 0 || dy[dir] == 0) ? 1f : 1.4142135f;
-                float tentativeG = gScore[current] + stepCost;
-                if (tentativeG >= gScore[neighbor])
-                    continue;
-
-                cameFrom[neighbor] = current;
-                gScore[neighbor] = tentativeG;
-                fScore[neighbor] = tentativeG + Heuristic(neighbor, goal, width);
-
-                if (!open.Contains(neighbor))
-                    open.Add(neighbor);
-            }
-        }
-
-        return false;
+        return Agent.isOnNavMesh;
     }
 
-    static float Heuristic(int a, int b, int width)
+    void SyncNavAgentSettings()
     {
-        int ax = a % width;
-        int ay = a / width;
-        int bx = b % width;
-        int by = b / width;
-        return Mathf.Abs(ax - bx) + Mathf.Abs(ay - by);
+        if (Agent == null)
+            return;
+
+        Agent.updateUpAxis = false;
+        Agent.updateRotation = false;
+        Agent.acceleration = Mathf.Max(0.01f, acceleration);
+        Agent.stoppingDistance = Mathf.Max(0.01f, stopDistance);
+        Agent.speed = Mathf.Max(0.01f, CurrentMoveSpeed);
     }
 
-    static void ReconstructPath(int goal, int[] cameFrom, int width, Vector2 min, float cell, float halfCell, List<Vector2> outPath)
+    void ConfigureNavAgent()
     {
-        outPath.Clear();
-        int current = goal;
-        while (current >= 0)
-        {
-            int x = current % width;
-            int y = current / width;
-            outPath.Add(new Vector2(min.x + x * cell + halfCell, min.y + y * cell + halfCell));
-            current = cameFrom[current];
-        }
+        if (Agent == null)
+            return;
 
-        outPath.Reverse();
-        if (outPath.Count > 1)
-            outPath.RemoveAt(0);
+        Agent.updateUpAxis = false;
+        Agent.updateRotation = false;
+        Agent.autoRepath = true;
+        Agent.autoBraking = true;
     }
-
-    static bool TryFindNearestWalkableCell(int x, int y, int width, int height, bool[] blocked, out int outX, out int outY)
-    {
-        int center = y * width + x;
-        if (!blocked[center])
-        {
-            outX = x;
-            outY = y;
-            return true;
-        }
-
-        int maxRadius = Mathf.Max(width, height);
-        for (int r = 1; r <= maxRadius; r++)
-        {
-            int minX = Mathf.Max(0, x - r);
-            int maxX = Mathf.Min(width - 1, x + r);
-            int minY = Mathf.Max(0, y - r);
-            int maxY = Mathf.Min(height - 1, y + r);
-
-            for (int yy = minY; yy <= maxY; yy++)
-            {
-                for (int xx = minX; xx <= maxX; xx++)
-                {
-                    if (xx != minX && xx != maxX && yy != minY && yy != maxY)
-                        continue;
-
-                    int idx = yy * width + xx;
-                    if (!blocked[idx])
-                    {
-                        outX = xx;
-                        outY = yy;
-                        return true;
-                    }
-                }
-            }
-        }
-
-        outX = x;
-        outY = y;
-        return false;
-    }
-
-    Bounds ResolvePathBounds(Vector2 start, Vector2 goal, float cell)
-    {
-        Bounds bounds;
-        if (RoomGenerator.HasInstance && RoomGenerator.Instance.RoomBounds.size.sqrMagnitude > 0.0001f)
-        {
-            bounds = RoomGenerator.Instance.RoomBounds;
-        }
-        else
-        {
-            float size = Mathf.Max(2f, fallbackBoundsSize);
-            bounds = new Bounds(transform.position, new Vector3(size, size, 0f));
-        }
-
-        bounds.Encapsulate(new Vector3(start.x, start.y, bounds.center.z));
-        bounds.Encapsulate(new Vector3(goal.x, goal.y, bounds.center.z));
-
-        float padding = Mathf.Max(cell * 2f, 0.5f);
-        bounds.Expand(new Vector3(padding, padding, 0f));
-        return bounds;
-    }
-
-    void EnsurePathBlockMask()
-    {
-        int wallsLayer = LayerMask.NameToLayer(WallsLayerName);
-        if (wallsLayer >= 0)
-            pathBlockMask |= (1 << wallsLayer);
-
-        int obstaclesLayer = LayerMask.NameToLayer(ObstaclesLayerName);
-        if (obstaclesLayer >= 0)
-            pathBlockMask |= (1 << obstaclesLayer);
-    }
-
-    // -----------------------------
-    // Orientation
-    // -----------------------------
 
     protected virtual bool TryGetDesiredFacingDirection(out Vector2 desiredDir)
     {
@@ -902,12 +862,12 @@ public abstract class EnemyBase : MonoBehaviour
 
     void RotateSoActiveTipFacesPlayer()
     {
-        if (ActiveTip == null) return;
+        if (ActiveTip == null)
+            return;
 
         if (!TryGetDesiredFacingDirection(out Vector2 desiredDir))
             return;
 
-        // TIP FORWARD IS UP
         Vector2 tipForward = GetTipForward(ActiveTip);
 
         float angle = Vector2.SignedAngle(tipForward, desiredDir);
@@ -916,15 +876,12 @@ public abstract class EnemyBase : MonoBehaviour
         transform.Rotate(0f, 0f, Mathf.Clamp(angle, -step, step));
     }
 
-    // -----------------------------
-    // Movement helpers
-    // -----------------------------
-
     public Vector2 ForwardDir
     {
         get
         {
-            if (ActiveTip == null) return transform.up;
+            if (ActiveTip == null)
+                return transform.up;
             return GetTipForward(ActiveTip).normalized;
         }
     }
@@ -934,12 +891,3 @@ public abstract class EnemyBase : MonoBehaviour
         MoveInDirection(ForwardDir, speedMultiplier);
     }
 }
-
-
-
-
-
-
-
-
-

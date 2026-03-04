@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -13,10 +14,15 @@ public class GameFlowManager : Singleton<GameFlowManager>
     [SerializeField] private string mainMenuSceneName = "MainMenu";
     [SerializeField] private string gameplaySceneName = "SampleScene";
 
+    [Header("Music (FMOD)")]
+    [SerializeField] private EventReference mainMenuMusicEvent;
+    [SerializeField] private EventReference gameplayMusicEvent;
+
     [Header("Screen Fade")]
     [SerializeField, Min(0f)] private float fadeToBlackDuration = 0.2f;
     [SerializeField, Min(0f)] private float fadeFromBlackDuration = 0.25f;
     [SerializeField, Min(0f)] private float postSpawnBlackHold = 2f;
+    [SerializeField] private Font font;
 
     private RunSessionController _runSession;
     private PlayerController _trackedPlayer;
@@ -46,6 +52,7 @@ public class GameFlowManager : Singleton<GameFlowManager>
     private void OnEnable()
     {
         SceneManager.sceneLoaded += HandleSceneLoaded;
+        UpdateSceneMusic(SceneManager.GetActiveScene().name);
     }
 
     private void OnDisable()
@@ -273,6 +280,8 @@ public class GameFlowManager : Singleton<GameFlowManager>
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        UpdateSceneMusic(scene.name);
+
         if (scene.name != gameplaySceneName)
             return;
 
@@ -284,6 +293,32 @@ public class GameFlowManager : Singleton<GameFlowManager>
 
         if (!_isLoadingRunScene && !_isTransitioning && _runSession != null)
             StartFreshRun();
+    }
+
+    private void UpdateSceneMusic(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+            return;
+
+        if (sceneName == mainMenuSceneName)
+        {
+            if (!mainMenuMusicEvent.IsNull)
+                AudioManager.PlayBgm(mainMenuMusicEvent);
+            else
+                AudioManager.StopBgm();
+            return;
+        }
+
+        if (sceneName == gameplaySceneName)
+        {
+            if (!gameplayMusicEvent.IsNull)
+                AudioManager.PlayBgm(gameplayMusicEvent);
+            else
+                AudioManager.StopBgm();
+            return;
+        }
+
+        AudioManager.StopBgm();
     }
 
     private void TriggerVictory()
@@ -344,7 +379,7 @@ public class GameFlowManager : Singleton<GameFlowManager>
         _fadeDungeonLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
         _fadeDungeonLabel.verticalOverflow = VerticalWrapMode.Overflow;
         _fadeDungeonLabel.raycastTarget = false;
-        _fadeDungeonLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _fadeDungeonLabel.font = font;
         if (_fadeDungeonLabel.font == null)
             _fadeDungeonLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         _fadeDungeonLabel.text = string.Empty;

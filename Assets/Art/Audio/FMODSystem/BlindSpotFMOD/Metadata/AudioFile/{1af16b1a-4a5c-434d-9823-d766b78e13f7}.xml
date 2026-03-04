@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{1af16b1a-4a5c-434d-9823-d766b78e13f7}">
+		<property name="assetPath">
+			<value>Spooky Melody.wav</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>48</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>44.210562500000002</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{8352fdc4-5895-4de3-909c-78be8fa00376}</destination>
+		</relationship>
+	</object>
+</objects>

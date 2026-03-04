@@ -150,6 +150,12 @@ public class SonarConeVisual : MonoBehaviour
         _angleDeg = angleDeg;
     }
 
+    public void SetContinuousTarget(float range, float angleDeg)
+    {
+        _restRange = Mathf.Max(0f, range);
+        _angleDeg = angleDeg;
+    }
+
     public void SetRestColor(Color color, bool applyImmediately = true)
     {
         _restColorRGB = color;

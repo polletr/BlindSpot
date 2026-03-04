@@ -114,12 +114,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1194733540129125882}
-  - component: {fileID: 534683125127606861}
   - component: {fileID: 7528455045347836649}
   - component: {fileID: 3220147483884696791}
   - component: {fileID: 7971074734965413581}
   - component: {fileID: 662629426379676174}
   - component: {fileID: 4648510912414998760}
+  - component: {fileID: 2960408489421736151}
   - component: {fileID: 6746528590404983058}
   - component: {fileID: 8390122365178552083}
   m_Layer: 3
@@ -146,42 +146,6 @@ Transform:
   - {fileID: 1210538903317992952}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &534683125127606861
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5767868427770200671}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d713e57ad6e54a146a4aae209907750c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BlopShooter
-  player: {fileID: 662629426379676174}
-  wallet: {fileID: 7528455045347836649}
-  firePoint: {fileID: 0}
-  projectilePrefab: {fileID: 8396536286756738201, guid: 8323a2bbd6c94d14ba4e1ed5eeef93d0, type: 3}
-  fireCooldown: 3
-  projectileSpeed: 16
-  aimReadyTime: 1.5
-  aimingFlashlightRange: 7
-  aimingFlashlightAngle: 10
-  aimReadyFlashlightColor: {r: 0, g: 1, b: 0.14606738, a: 1}
-  OnChargeShot:
-    Guid:
-      Data1: -333007877
-      Data2: 1132896907
-      Data3: -1884700020
-      Data4: 547061589
-    Path: event:/Player/OnChargeShot
-  OnShoot:
-    Guid:
-      Data1: 748705603
-      Data2: 1153572382
-      Data3: -1819426168
-      Data4: 1941926182
-    Path: event:/Player/OnShoot
 --- !u!114 &7528455045347836649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -195,7 +159,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CurrencyWallet
   currentAmount: 0
-  capacity: 10
+  capacity: 3
   OnBlopCollected:
     Guid:
       Data1: 1820485630
@@ -279,15 +243,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   sonar: {fileID: 4648510912414998760}
+  flashlight: {fileID: 0}
   aimCursor: {fileID: 6746528590404983058}
-  blopShooter: {fileID: 534683125127606861}
+  blopShooter: {fileID: 0}
+  blopWallet: {fileID: 7528455045347836649}
   OnDashSound:
     Guid:
       Data1: -928585196
       Data2: 1297313830
       Data3: 1074392705
       Data4: 530408988
-    Path: event:/Player/OnDash
+    Path: event:/Player/OnPlayerDash
+  OnDeathSound:
+    Guid:
+      Data1: 0
+      Data2: 0
+      Data3: 0
+      Data4: 0
+    Path: 
+  OnFlashlight:
+    Guid:
+      Data1: 0
+      Data2: 0
+      Data3: 0
+      Data4: 0
+    Path: 
+  pingBlopCost: 3
+  pingInputDebounceSeconds: 0.08
   moveSpeed: 4
   aimingMoveSpeedMultiplier: 0.5
   acceleration: 20
@@ -301,9 +283,6 @@ MonoBehaviour:
   squashAmount: 1
   stretchTime: 0.1
   settleTime: 0.2
-  aimShakeStrength: 0.06
-  aimShakeVibrato: 20
-  aimShakeRandomness: 70
 --- !u!114 &4648510912414998760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -316,16 +295,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 083748f10d91bb54abbc6df1ad1786cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  flashlightEnabled: 1
-  flashlightUpdateInterval: 0
-  flashlightColor: {r: 0.18909934, g: 0.3094344, b: 0.4415095, a: 1}
-  aimSmoothTime: 0.2
-  originSmoothTime: 0
-  useRigidbodyOrigin: 1
-  flashlightReveals: 1
-  flashlightRevealDuration: 0.5
-  range: 10
-  angleDeg: 60
   obstacleMask:
     serializedVersion: 2
     m_Bits: 3072
@@ -333,7 +302,62 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 704
   piercingUpgrade: 0
-  rayCount: 100
+  impactPool: {fileID: 0}
+  clickPingEnabled: 1
+  clickPingRange: 10
+  clickPingSpeed: 5
+  clickPingThickness: 0.1
+  clickPingEdgeAlpha: 0.3
+  clickPingMidAlpha: 0.1
+  clickPingColor: {r: 0.75, g: 0.95, b: 1, a: 1}
+  clickPingRayCount: 128
+  clickPingRevealDuration: 5
+  clickPingEndFade: 2
+  clickPingEndThicknessScale: 0.1
+  clickPingColorFadeStart01: 0.4
+  clickPingColorFadeEndAlpha: 0
+  clickPingTailLength: 0.5
+  clickPingTailAlpha: 0.3
+  clickPingImpactPops: 0
+  clickPingImpactRayStep: 4
+  clickPingImpactWidth: 0.2
+  clickPingImpactHeight: 0.1
+  clickPingImpactLifetime: 0.12
+  clickPingImpactAlpha: 0.9
+  clickPingZOffset: 0.01
+  autoResolvePoolsFromHub: 1
+--- !u!114 &2960408489421736151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5767868427770200671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38a364fbfdf69e44ab036521706c5ce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFlashlight
+  flashlightEnabled: 1
+  flashlightUpdateInterval: 0.03
+  flashlightColor: {r: 0.85, g: 0.92, b: 1, a: 1}
+  aimSmoothTime: 0.05
+  originSmoothTime: 0
+  useRigidbodyOrigin: 1
+  turnOnDuration: 0.2
+  turnOnEase: 9
+  flashlightReveals: 1
+  flashlightRevealDuration: 0.2
+  range: 7
+  angleDeg: 45
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 3072
+  revealableMask:
+    serializedVersion: 2
+    m_Bits: 704
+  piercingUpgrade: 0
+  rayCount: 60
   conePool: {fileID: 0}
   autoResolvePoolsFromHub: 1
 --- !u!114 &6746528590404983058
@@ -419,7 +443,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 662629426379676174}
         m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
-        m_MethodName: OnShoot
+        m_MethodName: OnPing
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -487,6 +511,22 @@ MonoBehaviour:
       m_Calls: []
     m_ActionId: 9caa3d8a-6b2f-4e8e-8bad-6ede561bd9be
     m_ActionName: UI/TrackedDeviceOrientation
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 662629426379676174}
+        m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+        m_MethodName: OnToggleFlashlight
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 3081dd0d-fe7e-4299-b7b6-7681b3bd568e
+    m_ActionName: 'Player/FlashlightToggle[/Keyboard/f]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player

@@ -9,9 +9,11 @@ public sealed class SquarePatrolState : EnemyStateBase
     {
         _waitTimer = 0f;
         _waiting = false;
+
         var square = (SquareEnemy)e;
         square.ClearMoveIntent();
         square.InvalidateNavPath();
+
         if (!square.EnsurePatrolRoute())
             square.ChangeState(square.IdleState);
     }
@@ -29,7 +31,11 @@ public sealed class SquarePatrolState : EnemyStateBase
         if (!square.HasPatrolRoute && !square.EnsurePatrolRoute())
         {
             square.ChangeState(square.IdleState);
+            return;
         }
+
+        if (!square.EnsureReachableCurrentPatrolPoint())
+            square.ChangeState(square.IdleState);
     }
 
     public override void FixedTick(EnemyBase e)
@@ -66,4 +72,3 @@ public sealed class SquarePatrolState : EnemyStateBase
         square.MoveTowardPatrolPoint();
     }
 }
-
