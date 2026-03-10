@@ -22,6 +22,12 @@ public sealed class SquareChaseState : EnemyStateBase
 
         if (square.IsPlayerDead || (square.PlayerBeyondLoseRadius() && !square.IsForcedAggroActive))
         {
+            if (!square.IsPlayerDead && square.HasFlashlightStimulus)
+            {
+                square.ChangeState(square.CuriousState);
+                return;
+            }
+
             if (square.EnsurePatrolRoute())
                 square.ChangeState(square.PatrolState);
             else

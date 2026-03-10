@@ -29,6 +29,9 @@ public class TriangleEnemy : EnemyBase
     [SerializeField, Range(0f, 0.5f)] float chaseDirectionSmoothTime = 0.12f;
     [SerializeField, Range(1f, 4f)] float chaseSlowDistanceMultiplier = 1.75f;
     [SerializeField, Range(0f, 1f)] float minChaseSpeedFraction = 0.25f;
+    [Header("Curious Behavior")]
+    [SerializeField, Range(0.1f, 2f)] float curiositySpeedFraction = 0.85f;
+    [SerializeField, Min(0.01f)] float curiosityArriveDistance = 0.2f;
 
     Vector2 dashDirection = Vector2.up;
     bool dashDirectionLocked;
@@ -48,6 +51,7 @@ public class TriangleEnemy : EnemyBase
     public TriangleChaseState ChaseState { get; private set; }
     public TriangleDashState DashState { get; private set; }
     public TriangleRepositionState RepositionState { get; private set; }
+    public TriangleCuriousState CuriousState { get; private set; }
 
     public bool IsPlayerDead => IsTargetPlayerDead;
     protected override bool ShouldRotateTowardPlayer => !rotationLocked;
@@ -72,6 +76,7 @@ public class TriangleEnemy : EnemyBase
         ChaseState = new TriangleChaseState();
         DashState = new TriangleDashState();
         RepositionState = new TriangleRepositionState();
+        CuriousState = new TriangleCuriousState();
 
         smoothedChaseDir = ForwardDir;
         ChangeState(IdleState);
@@ -335,6 +340,26 @@ public class TriangleEnemy : EnemyBase
         }
 
         MoveToPlayer(chaseSpeedMultiplier * clampedFraction);
+    }
+
+    public bool IsAtCuriosityTarget()
+    {
+        if (!HasFlashlightStimulus)
+            return true;
+
+        return ReachedPosition(FlashlightStimulusPosition, curiosityArriveDistance);
+    }
+
+    public void MoveTowardCuriosityTarget()
+    {
+        if (!HasFlashlightStimulus)
+        {
+            StopMove();
+            return;
+        }
+
+        Vector2 target = FlashlightStimulusPosition;
+        MoveToPosition(target, Mathf.Max(0.05f, curiositySpeedFraction));
     }
 
     protected override void OnDisable()

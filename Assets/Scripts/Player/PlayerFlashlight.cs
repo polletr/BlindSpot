@@ -396,14 +396,18 @@ public class PlayerFlashlight : MonoBehaviour
             float ang = Vector2.Angle(forward, dir);
             if (ang > half) continue;
 
-            if (vision != null && vision.ContainsPoint(closest))
-                continue;
-
             if (!piercingUpgrade)
             {
                 RaycastHit2D block = Physics2D.Raycast(origin, dir, dist, obstacleMask);
                 if (block.collider != null) continue;
             }
+
+            var enemy = col.GetComponentInParent<EnemyBase>();
+            if (enemy != null)
+                enemy.NotifyFlashlightTouch(origin);
+
+            if (vision != null && vision.ContainsPoint(closest))
+                continue;
 
             var reveal = col.GetComponentInParent<Revealable>();
             if (reveal != null && reveal.CanBeRevealed)

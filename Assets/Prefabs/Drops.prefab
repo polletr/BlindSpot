@@ -178,7 +178,6 @@ GameObject:
   - component: {fileID: 7672736699873156918}
   - component: {fileID: 6105099101142339924}
   - component: {fileID: 4985793951640094792}
-  - component: {fileID: 6078687685840203388}
   m_Layer: 7
   m_Name: Drops
   m_TagString: Untagged
@@ -314,27 +313,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!114 &6078687685840203388
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8377181638012513058}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f08c466f0a7eace4faed307b12d395e9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Revealable
-  mainSpriteRenderer: {fileID: 7672736699873156918}
-  revealParticleSystem: {fileID: 1355215366693865612}
-  revealUpgradeSpriteRenderer: {fileID: 0}
-  controlMainSpriteVisibility: 1
-  useUpgradeDrivenRevealVisual: 0
-  forceUpgradeRevealVisual: 0
-  hideOnStart: 1
-  fadeOutTime: 0.1
-  flashlightRevealAlpha: 0.5
 --- !u!1001 &3515539092255886150
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -399,10 +377,5 @@ PrefabInstance:
 --- !u!4 &535750331384650357 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4010150061061411123, guid: 63e7a8faf058fd54b84e2d9656461e03, type: 3}
-  m_PrefabInstance: {fileID: 3515539092255886150}
-  m_PrefabAsset: {fileID: 0}
---- !u!198 &1355215366693865612 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 2451934156017959882, guid: 63e7a8faf058fd54b84e2d9656461e03, type: 3}
   m_PrefabInstance: {fileID: 3515539092255886150}
   m_PrefabAsset: {fileID: 0}

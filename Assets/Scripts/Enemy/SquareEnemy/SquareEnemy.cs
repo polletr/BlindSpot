@@ -18,10 +18,14 @@ public class SquareEnemy : EnemyBase
     [SerializeField, Range(0f, 0.5f)] float chaseDirectionSmoothTime = 0.14f;
     [SerializeField, Range(1f, 4f)] float chaseSlowDistanceMultiplier = 1.8f;
     [SerializeField, Range(0f, 1f)] float minChaseSpeedFraction = 0.35f;
+    [Header("Curious Behavior")]
+    [SerializeField, Range(0.1f, 2f)] float curiositySpeedFraction = 0.9f;
+    [SerializeField, Min(0.01f)] float curiosityArriveDistance = 0.2f;
 
     public SquareIdleState IdleState { get; private set; }
     public SquarePatrolState PatrolState { get; private set; }
     public SquareChaseState ChaseState { get; private set; }
+    public SquareCuriousState CuriousState { get; private set; }
 
     readonly Vector2[] _patrolPoints = new Vector2[4];
     int _patrolPointCount;
@@ -145,6 +149,7 @@ public class SquareEnemy : EnemyBase
         IdleState = new SquareIdleState();
         PatrolState = new SquarePatrolState();
         ChaseState = new SquareChaseState();
+        CuriousState = new SquareCuriousState();
 
         ChangeState(IdleState);
     }
@@ -438,6 +443,34 @@ public class SquareEnemy : EnemyBase
             SetMoveIntent(DirToPlayer);
 
         MoveToPlayer(chaseSpeedMultiplier * clampedFraction);
+    }
+
+    public bool IsAtCuriosityTarget()
+    {
+        if (!HasFlashlightStimulus)
+            return true;
+
+        return ReachedPosition(FlashlightStimulusPosition, curiosityArriveDistance);
+    }
+
+    public void MoveTowardCuriosityTarget()
+    {
+        if (!HasFlashlightStimulus)
+        {
+            ClearMoveIntent();
+            StopMove();
+            return;
+        }
+
+        Vector2 target = FlashlightStimulusPosition;
+        Vector2 moveDir = GetNavMeshDirection(target);
+
+        if (moveDir.sqrMagnitude > 0.0001f)
+            SetMoveIntent(moveDir);
+        else
+            ClearMoveIntent();
+
+        MoveToPosition(target, Mathf.Max(0.05f, curiositySpeedFraction));
     }
 
     protected override void OnDrawGizmosSelected()

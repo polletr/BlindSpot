@@ -18,7 +18,10 @@ public sealed class TriangleAlertState : EnemyStateBase
         if (t.PlayerBeyondLoseRadius())
         {
             t.CancelCharge();
-            t.ChangeState(t.IdleState);
+            if (!t.IsPlayerDead && t.HasFlashlightStimulus)
+                t.ChangeState(t.CuriousState);
+            else
+                t.ChangeState(t.IdleState);
             return;
         }
 

@@ -25,7 +25,10 @@ public sealed class TriangleChaseState : EnemyStateBase
 
         if ((t.PlayerBeyondLoseRadius() && !t.IsForcedAggroActive) || t.IsPlayerDead)
         {
-            t.ChangeState(t.IdleState);
+            if (!t.IsPlayerDead && t.HasFlashlightStimulus)
+                t.ChangeState(t.CuriousState);
+            else
+                t.ChangeState(t.IdleState);
             return;
         }
 

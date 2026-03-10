@@ -28,6 +28,12 @@ public sealed class SquarePatrolState : EnemyStateBase
             return;
         }
 
+        if (square.HasFlashlightStimulus)
+        {
+            square.ChangeState(square.CuriousState);
+            return;
+        }
+
         if (!square.HasPatrolRoute && !square.EnsurePatrolRoute())
         {
             square.ChangeState(square.IdleState);

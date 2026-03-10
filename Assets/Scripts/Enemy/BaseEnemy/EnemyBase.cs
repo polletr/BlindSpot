@@ -102,6 +102,9 @@ public abstract class EnemyBase : MonoBehaviour
     bool _hasNavDestination;
     float _forcedAggroUntil;
     float _nextNavRecoverTime;
+    bool _hasFlashlightStimulus;
+    Vector2 _flashlightStimulusPosition;
+    float _lastFlashlightStimulusTime;
 
     protected IEnemyState currentState;
     protected bool IsTargetPlayerDead => TargetPlayerController != null && TargetPlayerController.IsDead;
@@ -179,6 +182,7 @@ public abstract class EnemyBase : MonoBehaviour
             SetSpritesVisible(true);
 
         CurrentHealth = Mathf.Clamp(CurrentHealth <= 0 ? maxHealth : CurrentHealth, 1, maxHealth);
+        ClearFlashlightStimulus();
 
         EnableAllColliders(true);
         InvalidateNavPath();
@@ -281,8 +285,32 @@ public abstract class EnemyBase : MonoBehaviour
     public bool PlayerInDetectRadius() => HasPlayer && DistToPlayer <= CurrentDetectRadius;
     public bool PlayerBeyondLoseRadius() => !HasPlayer || DistToPlayer >= CurrentLoseRadius;
     public bool IsForcedAggroActive => Time.time < _forcedAggroUntil;
+    public bool HasFlashlightStimulus => _hasFlashlightStimulus;
+    public Vector2 FlashlightStimulusPosition => _flashlightStimulusPosition;
+    public float LastFlashlightStimulusTime => _lastFlashlightStimulusTime;
 
     public bool CanUseNavAgent() => Agent != null && Agent.enabled && Agent.isOnNavMesh;
+
+    public void NotifyFlashlightTouch(Vector2 sourcePosition)
+    {
+        if (IsDead)
+            return;
+
+        _flashlightStimulusPosition = sourcePosition;
+        _lastFlashlightStimulusTime = Time.time;
+        _hasFlashlightStimulus = true;
+    }
+
+    public void ClearFlashlightStimulus()
+    {
+        _hasFlashlightStimulus = false;
+    }
+
+    public bool ReachedPosition(Vector2 destination, float extraTolerance = 0f)
+    {
+        float tolerance = Mathf.Max(0.01f, stopDistance + Mathf.Max(0f, extraTolerance));
+        return Vector2.Distance(transform.position, destination) <= tolerance;
+    }
 
     public void MoveToPosition(Vector2 destination, float speedMultiplier = 1f, bool forceRepath = false)
     {
@@ -390,6 +418,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         IsDead = true;
         CurrentHealth = 0;
+        ClearFlashlightStimulus();
 
         currentState?.Exit(this);
         currentState = null;
