@@ -118,7 +118,6 @@ GameObject:
   - component: {fileID: 3220147483884696791}
   - component: {fileID: 7971074734965413581}
   - component: {fileID: 662629426379676174}
-  - component: {fileID: 4648510912414998760}
   - component: {fileID: 2960408489421736151}
   - component: {fileID: 6746528590404983058}
   - component: {fileID: 8390122365178552083}
@@ -242,10 +241,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12d75a33056e52c489994451341e4797, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  sonar: {fileID: 4648510912414998760}
-  flashlight: {fileID: 0}
+  flashlight: {fileID: 2960408489421736151}
   aimCursor: {fileID: 6746528590404983058}
-  blopShooter: {fileID: 0}
   blopWallet: {fileID: 7528455045347836649}
   OnDashSound:
     Guid:
@@ -270,6 +267,60 @@ MonoBehaviour:
     Path: 
   pingBlopCost: 1
   pingInputDebounceSeconds: 0.08
+  playerPulseData:
+    maxRadius: 35
+    duration: 0.8
+    fadeOutTime: 0.2
+    radiusCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    alphaCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    useLight2D: 1
+    maxLightIntensity: 1
   moveSpeed: 4
   aimingMoveSpeedMultiplier: 0.5
   acceleration: 20
@@ -283,49 +334,6 @@ MonoBehaviour:
   squashAmount: 1
   stretchTime: 0.1
   settleTime: 0.2
---- !u!114 &4648510912414998760
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5767868427770200671}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 083748f10d91bb54abbc6df1ad1786cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 3072
-  revealableMask:
-    serializedVersion: 2
-    m_Bits: 704
-  piercingUpgrade: 0
-  impactPool: {fileID: 0}
-  clickPingEnabled: 1
-  clickPingRange: 10
-  clickPingSpeed: 5
-  clickPingThickness: 0.1
-  clickPingEdgeAlpha: 0.3
-  clickPingMidAlpha: 0.1
-  clickPingColor: {r: 0.75, g: 0.95, b: 1, a: 1}
-  clickPingRayCount: 128
-  clickPingRevealDuration: 5
-  clickPingEndFade: 2
-  clickPingEndThicknessScale: 0.1
-  clickPingColorFadeStart01: 0.4
-  clickPingColorFadeEndAlpha: 0
-  clickPingTailLength: 0.5
-  clickPingTailAlpha: 0.3
-  clickPingImpactPops: 0
-  clickPingImpactRayStep: 4
-  clickPingImpactWidth: 0.2
-  clickPingImpactHeight: 0.1
-  clickPingImpactLifetime: 0.12
-  clickPingImpactAlpha: 0.9
-  clickPingZOffset: 0.01
-  autoResolvePoolsFromHub: 1
 --- !u!114 &2960408489421736151
 MonoBehaviour:
   m_ObjectHideFlags: 0

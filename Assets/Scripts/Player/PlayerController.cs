@@ -8,10 +8,8 @@ using FMODUnity;
 public class PlayerController : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private SonarPing sonar;
     [SerializeField] private PlayerFlashlight flashlight;
     [SerializeField] private VirtualAimCursor aimCursor;
-    [SerializeField] private BlopShooter blopShooter;
     [SerializeField] private BlopWallet blopWallet;
     [SerializeField] private EventReference OnDashSound;
     [SerializeField] private EventReference OnDeathSound;
@@ -20,6 +18,7 @@ public class PlayerController : MonoBehaviour
     [Header("Ping")]
     [SerializeField, Min(0)] private int pingBlopCost = 3;
     [SerializeField, Min(0f)] private float pingInputDebounceSeconds = 0.08f;
+    [SerializeField] private SonarPulseData playerPulseData;
 
     [Header("Movement Tuning")]
     [SerializeField] private float moveSpeed = 6f;
@@ -142,21 +141,6 @@ public class PlayerController : MonoBehaviour
         if (visualRoot != null)
             _visualRootRestLocalPos = visualRoot.localPosition;
 
-        if (sonar == null) sonar = GetComponent<SonarPing>();
-        bool createdFlashlight = false;
-        if (flashlight == null) flashlight = GetComponent<PlayerFlashlight>();
-        if (flashlight == null)
-        {
-            flashlight = gameObject.AddComponent<PlayerFlashlight>();
-            createdFlashlight = true;
-        }
-        if (createdFlashlight && sonar != null)
-        {
-            flashlight.obstacleMask = sonar.obstacleMask;
-            flashlight.revealableMask = sonar.revealableMask;
-            flashlight.piercingUpgrade = sonar.piercingUpgrade;
-            flashlight.autoResolvePoolsFromHub = sonar.autoResolvePoolsFromHub;
-        }
         if (flashlight != null)
         {
             flashlight.SetAimProvider(() => AimDir);
@@ -243,6 +227,7 @@ public class PlayerController : MonoBehaviour
 
     public void OnPing(InputAction.CallbackContext ctx)
     {
+        if (IsDead) return;
         if (ctx.canceled)
         {
             _pingInputHeld = false;
@@ -264,8 +249,6 @@ public class PlayerController : MonoBehaviour
         _pingInputHeld = true;
         if (Time.unscaledTime - _lastPingInputTime < pingInputDebounceSeconds) return;
         _lastPingInputTime = Time.unscaledTime;
-        if (IsDead) return;
-        if (sonar == null || !sonar.CanLaunchClickPing) return;
         if (blopWallet == null)
         {
             blopWallet = GetComponent<BlopWallet>();
@@ -279,7 +262,7 @@ public class PlayerController : MonoBehaviour
         }
         if (!blopWallet.TrySpend(pingBlopCost)) return;
 
-        sonar.TriggerClickPing();
+        SonarPulseManager.Instance.PlayPulse(this.transform.position, playerPulseData);
     }
 
     public void OnToggleFlashlight(InputAction.CallbackContext ctx)
@@ -339,7 +322,6 @@ public class PlayerController : MonoBehaviour
         transform.position = position;
         _isTemporarilyInvincible = false;
         SetMovementInputLocked(false);
-        blopShooter?.ReleaseCharge();
 
         if (flashlight != null)
             flashlight.ForceFlashlightState(_flashlightEnabledBeforeKill);

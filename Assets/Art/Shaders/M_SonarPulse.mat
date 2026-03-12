@@ -76,10 +76,10 @@ Material:
     - _InnerTrailWidth: 12
     - _OuterTrailWidth: 0.15
     - _PulseFade: 1
-    - _PulseRadius: 14.4
+    - _PulseRadius: 0
     - _PulseSoftness: 0.1
     - _PulseStrength: 10
-    - _PulseWidth: 0.05
+    - _PulseWidth: 0.09
     - _RevealStrength: 8
     - _ZWrite: 0
     m_Colors:
