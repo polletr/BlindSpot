@@ -71,15 +71,15 @@ Material:
     m_Ints: []
     m_Floats:
     - _EnableExternalAlpha: 0
-    - _InnerFadeStrength: 0.1
+    - _InnerFadeStrength: 0.05
     - _InnerFadeWidth: 0.2
-    - _InnerTrailWidth: 12
+    - _InnerTrailWidth: 6
     - _OuterTrailWidth: 0.15
     - _PulseFade: 1
     - _PulseRadius: 0
     - _PulseSoftness: 0.1
     - _PulseStrength: 10
-    - _PulseWidth: 0.09
+    - _PulseWidth: 0.02
     - _RevealStrength: 8
     - _ZWrite: 0
     m_Colors:

@@ -54,6 +54,7 @@ public class BlopWallet : MonoBehaviour
 
         int newTotal = Mathf.Clamp(currentAmount + amount, 0, capacity);
         if (newTotal == currentAmount) return;
+        AudioManager.Instance.PlayOneShot(OnBlopCollected, transform.position);
 
         currentAmount = newTotal;
         NotifyChanged();
@@ -71,7 +72,6 @@ public class BlopWallet : MonoBehaviour
 
     private void NotifyChanged()
     {
-        AudioManager.Instance.PlayOneShot(OnBlopCollected, transform.position);
         GameFlowManager.Instance.HandleBlopsChanged(currentAmount, capacity);
     }
 }

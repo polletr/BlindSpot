@@ -121,6 +121,7 @@ GameObject:
   - component: {fileID: 2960408489421736151}
   - component: {fileID: 6746528590404983058}
   - component: {fileID: 8390122365178552083}
+  - component: {fileID: 8969620291119978357}
   m_Layer: 3
   m_Name: Player
   m_TagString: Untagged
@@ -157,7 +158,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fce0e33f36ab864dbe27eec7f194852, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CurrencyWallet
-  currentAmount: 0
+  currentAmount: 3
   capacity: 3
   OnBlopCollected:
     Guid:
@@ -268,9 +269,12 @@ MonoBehaviour:
   pingBlopCost: 1
   pingInputDebounceSeconds: 0.08
   playerPulseData:
-    maxRadius: 35
+    maxRadius: 7
     duration: 0.8
     fadeOutTime: 0.2
+    player: 1
+    revealTime: 3
+    pulseColor: {r: 0.5934051, g: 0.990566, b: 0.9866354, a: 1}
     radiusCurve:
       serializedVersion: 2
       m_Curve:
@@ -319,8 +323,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    useLight2D: 1
-    maxLightIntensity: 1
   moveSpeed: 4
   aimingMoveSpeedMultiplier: 0.5
   acceleration: 20
@@ -540,6 +542,20 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &8969620291119978357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5767868427770200671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86c6556701af9e04380698b89f691b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FMODUnity::FMODUnity.StudioListener
+  nonRigidbodyVelocity: 0
+  attenuationObject: {fileID: 0}
 --- !u!1 &8475453098573834671
 GameObject:
   m_ObjectHideFlags: 0

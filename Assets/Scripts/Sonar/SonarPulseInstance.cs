@@ -1,4 +1,6 @@
 using DG.Tweening;
+using FMODUnity;
+using Unity.Android.Gradle.Manifest;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -7,8 +9,8 @@ public class SonarPulseInstance : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform visualRoot;
     [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Light2D pulseLight;
     [SerializeField] private CircleCollider2D triggerCollider;
+    [SerializeField] private EventReference OnSonarPing;
 
     [Header("Animation")]
     [SerializeField] private float radiusGrowthSpeed = 12f;
@@ -18,12 +20,14 @@ public class SonarPulseInstance : MonoBehaviour
     private Material _runtimeMaterial;
     private Color _baseColor;
     private SonarPulseData _data;
+    private Vector3 _worldPos;
     private Sequence _pulseSequence;
     private float _currentRadius;
     private float _currentAlpha = 1f;
 
     private static readonly int ColorProp = Shader.PropertyToID("_Color");
     private static readonly int PulseRadiusProp = Shader.PropertyToID("_PulseRadius");
+    private static readonly int PulseCenterProp = Shader.PropertyToID("_PulseCenter");
 
     private void Awake()
     {
@@ -33,11 +37,6 @@ public class SonarPulseInstance : MonoBehaviour
         {
             _runtimeMaterial = new Material(spriteRenderer.material);
             spriteRenderer.material = _runtimeMaterial;
-
-            if (_runtimeMaterial.HasProperty(ColorProp))
-                _baseColor = _runtimeMaterial.color;
-            else
-                _baseColor = Color.white;
         }
     }
 
@@ -51,12 +50,17 @@ public class SonarPulseInstance : MonoBehaviour
         CacheReferences();
     }
 
-    public void Play(SonarPulseData data)
+    public void Play(SonarPulseData data, Vector3 worldPosition)
     {
         _data = data;
+        _worldPos = worldPosition;
         _pulseSequence?.Kill();
 
-        transform.localScale = Vector3.one;
+        if (!_data.player)
+            triggerCollider.enabled = false;
+
+        _baseColor = _data.pulseColor;
+
 
         SetPulseState(0f, 1f);
         PlaySequence();
@@ -87,7 +91,18 @@ public class SonarPulseInstance : MonoBehaviour
                     .SetEase(fadeEase));
         }
 
+        Debug.Log(_worldPos);
+        AudioManager.PlayAt(OnSonarPing, _worldPos);
+
         _pulseSequence.OnComplete(() => Destroy(gameObject));
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.TryGetComponent<Revealable>(out var revealableObj))
+        {
+            revealableObj.Reveal(_data.revealTime);
+        }
     }
 
     private float GetGrowthDuration()
@@ -108,6 +123,9 @@ public class SonarPulseInstance : MonoBehaviour
             if (_runtimeMaterial.HasProperty(PulseRadiusProp))
                 _runtimeMaterial.SetFloat(PulseRadiusProp, _currentRadius);
 
+            if (_runtimeMaterial.HasProperty(PulseCenterProp))
+                _runtimeMaterial.SetVector(PulseCenterProp, _worldPos);
+
             if (_runtimeMaterial.HasProperty(ColorProp))
             {
                 Color color = _baseColor;
@@ -123,10 +141,7 @@ public class SonarPulseInstance : MonoBehaviour
             spriteRenderer.color = color;
         }
 
-        if (visualRoot != null)
-            visualRoot.localScale = Vector3.one;
-
-        if (triggerCollider != null)
+        if (triggerCollider != null && _data.player)
             triggerCollider.radius = _currentRadius;
     }
 

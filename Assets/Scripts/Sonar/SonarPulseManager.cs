@@ -21,6 +21,6 @@ public class SonarPulseManager : Singleton<SonarPulseManager>
             pulseContainer
         );
 
-        pulse.Play(data);
+        pulse.Play(data, worldPosition);
     }
 }
